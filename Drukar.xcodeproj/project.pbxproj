@@ -1,0 +1,376 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0BFE7664D8EEEA71C00B90A7 /* LayoutResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D31169150A3DD22C0F0E70D /* LayoutResolver.swift */; };
+		4B9D4E5FFFC211DBA0F96820 /* DrukarInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01ECB0BDEC5484C3A6D98B2 /* DrukarInputController.swift */; };
+		72E492EC8C80A8F51EBA6683 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F93B5D5095F396A34E761A99 /* Assets.xcassets */; };
+		963985C5BF338FD00C63D082 /* WordDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 611DAF7742645848E2BA7726 /* WordDictionary.swift */; };
+		9B503423080C69ABE08272A9 /* DrukarLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF761C2C620FCEEA23E319F /* DrukarLog.swift */; };
+		AFA925FBF65FADE147D24B24 /* LanguageDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A598A938EBB7171C1582F3 /* LanguageDetector.swift */; };
+		C16EC763E29A2EA9968F8A25 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FD5B770441A4780A1B3A6B6 /* AppDelegate.swift */; };
+		C1E4C0890960BB888CEC3B57 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F8C771E4D49303EEB5F695 /* main.swift */; };
+		CC9E774424687A83A7E3C9CD /* CharacterMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C5FDDB40D193FB92C0EAB8 /* CharacterMapper.swift */; };
+		D3DF8C7CB61F72A353EB3CAB /* DualBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06D2223EF23F22994178C403 /* DualBuffer.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		06D2223EF23F22994178C403 /* DualBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualBuffer.swift; sourceTree = "<group>"; };
+		0B4824FDD6B2D60EEAB77793 /* Drukar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Drukar.entitlements; sourceTree = "<group>"; };
+		22A598A938EBB7171C1582F3 /* LanguageDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetector.swift; sourceTree = "<group>"; };
+		2DF761C2C620FCEEA23E319F /* DrukarLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrukarLog.swift; sourceTree = "<group>"; };
+		36C5FDDB40D193FB92C0EAB8 /* CharacterMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterMapper.swift; sourceTree = "<group>"; };
+		3FD5B770441A4780A1B3A6B6 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		611DAF7742645848E2BA7726 /* WordDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordDictionary.swift; sourceTree = "<group>"; };
+		800113F4A294BE738448044D /* Drukar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Drukar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8D31169150A3DD22C0F0E70D /* LayoutResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutResolver.swift; sourceTree = "<group>"; };
+		BF0E4D327D6E41F9069FEE4E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		D01ECB0BDEC5484C3A6D98B2 /* DrukarInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrukarInputController.swift; sourceTree = "<group>"; };
+		D1F8C771E4D49303EEB5F695 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		F93B5D5095F396A34E761A99 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1583535B3839833760577124 = {
+			isa = PBXGroup;
+			children = (
+				2F01F09317BAED41EABCE675 /* Drukar */,
+				7FB5040F85FE627A975970CF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2F01F09317BAED41EABCE675 /* Drukar */ = {
+			isa = PBXGroup;
+			children = (
+				C9EBB1F1DFA2508D861CD6EE /* App */,
+				35686C826F0D88E50184A342 /* Detection */,
+				5120B685922E68308097BD23 /* InputMethod */,
+				FFA9E2B2A6FE8A3287CB0FBD /* Resources */,
+			);
+			path = Drukar;
+			sourceTree = "<group>";
+		};
+		35686C826F0D88E50184A342 /* Detection */ = {
+			isa = PBXGroup;
+			children = (
+				36C5FDDB40D193FB92C0EAB8 /* CharacterMapper.swift */,
+				06D2223EF23F22994178C403 /* DualBuffer.swift */,
+				22A598A938EBB7171C1582F3 /* LanguageDetector.swift */,
+				611DAF7742645848E2BA7726 /* WordDictionary.swift */,
+			);
+			path = Detection;
+			sourceTree = "<group>";
+		};
+		5120B685922E68308097BD23 /* InputMethod */ = {
+			isa = PBXGroup;
+			children = (
+				D01ECB0BDEC5484C3A6D98B2 /* DrukarInputController.swift */,
+				8D31169150A3DD22C0F0E70D /* LayoutResolver.swift */,
+			);
+			path = InputMethod;
+			sourceTree = "<group>";
+		};
+		7FB5040F85FE627A975970CF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				800113F4A294BE738448044D /* Drukar.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C9EBB1F1DFA2508D861CD6EE /* App */ = {
+			isa = PBXGroup;
+			children = (
+				3FD5B770441A4780A1B3A6B6 /* AppDelegate.swift */,
+				2DF761C2C620FCEEA23E319F /* DrukarLog.swift */,
+				D1F8C771E4D49303EEB5F695 /* main.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		FFA9E2B2A6FE8A3287CB0FBD /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F93B5D5095F396A34E761A99 /* Assets.xcassets */,
+				0B4824FDD6B2D60EEAB77793 /* Drukar.entitlements */,
+				BF0E4D327D6E41F9069FEE4E /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AD6FFFF08B64ABEA0DB925B6 /* Drukar */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70CC8CE52C4B3CFE929D1B7D /* Build configuration list for PBXNativeTarget "Drukar" */;
+			buildPhases = (
+				E013012E8CE4E1CB4D1DBA8E /* Sources */,
+				8CBEEF488A4092276F613D12 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Drukar;
+			packageProductDependencies = (
+			);
+			productName = Drukar;
+			productReference = 800113F4A294BE738448044D /* Drukar.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9C2751443853394CD44566F8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1630;
+				TargetAttributes = {
+					AD6FFFF08B64ABEA0DB925B6 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = A2B4614F091C296CFF55D12F /* Build configuration list for PBXProject "Drukar" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 1583535B3839833760577124;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AD6FFFF08B64ABEA0DB925B6 /* Drukar */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8CBEEF488A4092276F613D12 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				72E492EC8C80A8F51EBA6683 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E013012E8CE4E1CB4D1DBA8E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C16EC763E29A2EA9968F8A25 /* AppDelegate.swift in Sources */,
+				CC9E774424687A83A7E3C9CD /* CharacterMapper.swift in Sources */,
+				4B9D4E5FFFC211DBA0F96820 /* DrukarInputController.swift in Sources */,
+				9B503423080C69ABE08272A9 /* DrukarLog.swift in Sources */,
+				D3DF8C7CB61F72A353EB3CAB /* DualBuffer.swift in Sources */,
+				AFA925FBF65FADE147D24B24 /* LanguageDetector.swift in Sources */,
+				0BFE7664D8EEEA71C00B90A7 /* LayoutResolver.swift in Sources */,
+				963985C5BF338FD00C63D082 /* WordDictionary.swift in Sources */,
+				C1E4C0890960BB888CEC3B57 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		39595040A6AFDBC30D63417C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		4B8BC5BF2D33E0644175E4A9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Drukar/Resources/Drukar.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Drukar/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.vasylpylypiv.inputmethod.Drukar;
+				PRODUCT_NAME = Drukar;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Debug;
+		};
+		CB1283F8C675A52C2372B2B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Drukar/Resources/Drukar.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Drukar/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.vasylpylypiv.inputmethod.Drukar;
+				PRODUCT_NAME = Drukar;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Release;
+		};
+		F3AD73646871A0A431B59A63 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		70CC8CE52C4B3CFE929D1B7D /* Build configuration list for PBXNativeTarget "Drukar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4B8BC5BF2D33E0644175E4A9 /* Debug */,
+				CB1283F8C675A52C2372B2B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A2B4614F091C296CFF55D12F /* Build configuration list for PBXProject "Drukar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				39595040A6AFDBC30D63417C /* Debug */,
+				F3AD73646871A0A431B59A63 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9C2751443853394CD44566F8 /* Project object */;
+}
