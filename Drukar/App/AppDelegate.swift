@@ -6,10 +6,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         server = IMKServer(
-            name: DrukarApp.connectionName,
-            bundleIdentifier: DrukarApp.bundleIdentifier
+            name: Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String
+                  ?? DrukarApp.connectionName,
+            bundleIdentifier: Bundle.main.bundleIdentifier ?? DrukarApp.bundleIdentifier
         )
-        DrukarLog.info("IMKServer started: \(DrukarApp.connectionName)")
+        DrukarLog.info("IMKServer started: bundle=\(Bundle.main.bundleIdentifier ?? "?") connection=\(Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String ?? "?")")
     }
 
     func applicationWillTerminate(_ notification: Notification) {

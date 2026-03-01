@@ -13,7 +13,7 @@ enum DrukarLog {
     }
 
     static func debug(_ message: String) {
-        general.debug("\(message, privacy: .public)")
+        general.notice("\(message, privacy: .public)")
     }
 
     static func warning(_ message: String) {

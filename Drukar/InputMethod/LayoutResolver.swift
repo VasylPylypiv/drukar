@@ -4,12 +4,36 @@ import Foundation
 /// Thin wrapper around TIS APIs for querying and switching keyboard layouts.
 enum LayoutResolver {
 
+    private static let drukarBundlePrefix = "com.vasylpylypiv.inputmethod"
+    private nonisolated(unsafe) static var _lastNonDrukarID: String?
+
     static func currentLayoutID() -> String {
         let source = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
         guard let idPtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) else {
             return ""
         }
-        return Unmanaged<CFString>.fromOpaque(idPtr).takeUnretainedValue() as String
+        let layoutID = Unmanaged<CFString>.fromOpaque(idPtr).takeUnretainedValue() as String
+
+        if !layoutID.hasPrefix(drukarBundlePrefix) {
+            _lastNonDrukarID = layoutID
+        }
+
+        return layoutID
+    }
+
+    /// Returns the last keyboard layout that was active before Drukar.
+    /// Falls back to first available EN/UA layout.
+    static func lastNonDrukarLayoutID() -> String? {
+        if let cached = _lastNonDrukarID { return cached }
+
+        // Try to find a sensible default from available layouts
+        for layoutID in availableLayoutIDs() {
+            if !layoutID.hasPrefix(drukarBundlePrefix) {
+                _lastNonDrukarID = layoutID
+                return layoutID
+            }
+        }
+        return nil
     }
 
     static func availableLayoutIDs() -> [String] {

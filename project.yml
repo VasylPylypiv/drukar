@@ -35,3 +35,5 @@ targets:
         SWIFT_STRICT_CONCURRENCY: complete
     resources:
       - path: Drukar/Resources/Assets.xcassets
+      - path: Drukar/Resources/drukar-icon.tiff
+      - path: Drukar/Resources/drukar-menubar.tiff

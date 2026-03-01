@@ -31,7 +31,7 @@
 
 	<!-- InputMethodKit configuration -->
 	<key>InputMethodConnectionName</key>
-	<string>Drukar_Connection</string>
+	<string>com.vasylpylypiv.inputmethod.Drukar_Connection</string>
 	<key>InputMethodServerControllerClass</key>
 	<string>Drukar.DrukarInputController</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>
@@ -40,7 +40,7 @@
 		<string>Cyrl</string>
 	</array>
 	<key>tsInputMethodIconFileKey</key>
-	<string>AppIcon</string>
+	<string>drukar-menubar</string>
 
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Vasyl Pylypiv. All rights reserved.</string>
