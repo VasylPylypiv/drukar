@@ -36,41 +36,43 @@ Drukar is different:
 
 ## Installation
 
-### Prerequisites
+### Quick Install (no Xcode needed)
 
-- macOS 14.0+ (Sonoma)
-- Xcode 16.0+
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen) (for project generation)
+1. Download `Drukar.app.zip` from [Releases](../../releases)
+2. Unzip and run the installer:
 
-### Build
+```bash
+unzip Drukar.app.zip
+./install.sh
+```
+
+Or install manually:
+
+```bash
+unzip Drukar.app.zip
+cp -R Drukar.app ~/Library/Input\ Methods/
+```
+
+3. Open **System Settings → Keyboard → Input Sources → Edit**
+4. Click **"+"** → find **Drukar** → Add
+5. Select Drukar as your active input source
+
+> First time: you may need to **log out and back in** for macOS to recognize the new input method.
+>
+> macOS may warn about "unidentified developer". Go to **System Settings → Privacy & Security** and click "Open Anyway".
+
+### Build from Source
+
+Requires macOS 14.0+, Xcode 16.0+, [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
 ```bash
 git clone https://github.com/AulonaV/drukar.git
 cd drukar
-
-# Generate Xcode project
 xcodegen generate
-
-# Open in Xcode
 open Drukar.xcodeproj
 ```
 
-In Xcode:
-1. Set **Team** to your Personal Team in Signing & Capabilities
-2. **Cmd+R** to build and run
-
-### Install as Input Method
-
-```bash
-cp -R ~/Library/Developer/Xcode/DerivedData/Drukar-*/Build/Products/Debug/Drukar.app ~/Library/Input\ Methods/
-```
-
-Then:
-1. Open **System Settings → Keyboard → Input Sources → Edit**
-2. Click **"+"** → find **Drukar**
-3. Add it and select as your active input source
-
-> After first install, you may need to **log out and back in** for macOS to recognize the new input method.
+In Xcode: set Team in Signing & Capabilities, then Cmd+R to build.
 
 ## Project Structure
 

@@ -37,3 +37,6 @@ Packages/
 .idea/
 .vscode/
 .claude/
+
+# Release builds (uploaded to GitHub Releases)
+release/
