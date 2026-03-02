@@ -5,7 +5,7 @@
 No more `Ghbdsn` instead of `Привіт`. No more `ру|щ` instead of `hello`.
 
 <p align="center">
-  <video src="[Demo.mp4](https://github.com/user-attachments/assets/cd4dd326-1e88-4e6d-8a79-5eb6a1183db9)" width="600" autoplay loop muted>
+  <video src="[Demo.mp4](https://github.com/user-attachments/assets/f8591be9-aae8-448d-80f4-96012dcf1a1e)" width="600" autoplay loop muted>
   </video>
 </p>
 
