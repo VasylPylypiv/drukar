@@ -17,6 +17,19 @@ class DrukarInputController: IMKInputController {
 
     private var composingText = ""
 
+    // MARK: - Input Mode
+
+    enum InputMode {
+        case auto
+        case english
+    }
+
+    // Mode is determined by Caps Lock state: LED on = English, LED off = Auto
+    private var mode: InputMode {
+        // Check actual hardware Caps Lock state
+        NSEvent.modifierFlags.contains(.capsLock) ? .english : .auto
+    }
+
     // MARK: - Lifecycle
 
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
@@ -24,12 +37,28 @@ class DrukarInputController: IMKInputController {
         resolveLayouts()
     }
 
+    private static let excludedBundleIDs: Set<String> = [
+        "com.apple.Terminal",
+        "com.googlecode.iterm2",
+        "net.kovidgoyal.kitty",
+        "com.github.wez.wezterm",
+        "co.zeit.hyper",
+        "dev.warp.Warp-Stable",
+    ]
+
+    private var isExcludedApp = false
+
     override func activateServer(_ sender: Any!) {
         super.activateServer(sender)
         buffer.clear()
         composingText = ""
         if !mapsReady { resolveLayouts() }
-        DrukarLog.info("activateServer: mapsReady=\(mapsReady)")
+
+        if let client = sender as? IMKTextInput {
+            let bundleID = client.bundleIdentifier() ?? ""
+            isExcludedApp = Self.excludedBundleIDs.contains(bundleID)
+            DrukarLog.info("activateServer: mapsReady=\(mapsReady) app=\(bundleID) excluded=\(isExcludedApp)")
+        }
     }
 
     override func deactivateServer(_ sender: Any!) {
@@ -39,11 +68,23 @@ class DrukarInputController: IMKInputController {
         super.deactivateServer(sender)
     }
 
+    override func commitComposition(_ sender: Any!) {
+        DrukarLog.debug("commitComposition called, composing='\(composingText)'")
+        if let client = sender as? IMKTextInput {
+            commitComposingText(client)
+        } else {
+            composingText = ""
+            buffer.clear()
+        }
+    }
+
     // MARK: - Event Handling
 
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event, event.type == .keyDown else { return false }
         guard let client = sender as? IMKTextInput else { return false }
+
+        if isExcludedApp { return false }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
@@ -69,10 +110,22 @@ class DrukarInputController: IMKInputController {
             return false
         }
 
+        // Any function keys or unknown keys — commit and pass through
+        if keyCode > 0x7E {
+            commitComposingText(client)
+            return false
+        }
+
         if DualBuffer.wordBoundaryKeyCodes.contains(keyCode) {
             let isSpace = keyCode == 0x31
+            if mode == .english {
+                commitComposingText(client)
+                return !isSpace ? false : {
+                    client.insertText(" ", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                    return true
+                }()
+            }
             handleWordBoundary(keyCode: keyCode, insertBoundary: isSpace, client: client)
-            // Space: we insert it ourselves. Enter/Tab: let the app handle natively.
             return isSpace
         }
 
@@ -83,8 +136,24 @@ class DrukarInputController: IMKInputController {
 
     private func handleCharacterInput(event: NSEvent, keyCode: UInt16, client: IMKTextInput) -> Bool {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let isShifted = modifiers.contains(.shift) || modifiers.contains(.capsLock)
+        let isShifted = modifiers.contains(.shift)
 
+        // EN mode: insert English character directly, no buffering
+        if mode == .english {
+            if mapsReady, let enID = enLayoutID {
+                if let enChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: enID) {
+                    client.insertText(String(enChar), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                    return true
+                }
+            }
+            if let chars = event.characters, !chars.isEmpty {
+                client.insertText(chars, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                return true
+            }
+            return false
+        }
+
+        // Auto mode: buffer and detect
         if mapsReady, let enID = enLayoutID, let uaID = uaLayoutID {
             let enChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: enID)
             let uaChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: uaID)
@@ -127,6 +196,12 @@ class DrukarInputController: IMKInputController {
 
         guard !buffer.isEmpty else {
             if insertBoundary {
+                // Clear any stale marked text state before inserting
+                if !composingText.isEmpty {
+                    composingText = ""
+                    client.setMarkedText("", selectionRange: NSRange(location: 0, length: 0),
+                                         replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                }
                 client.insertText(boundaryChar, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
             }
             return
@@ -158,8 +233,13 @@ class DrukarInputController: IMKInputController {
     // MARK: - Backspace
 
     private func handleBackspace(client: IMKTextInput) -> Bool {
-        guard !composingText.isEmpty else {
-            return false  // let system handle backspace on committed text
+        DrukarLog.debug("backspace: composing='\(composingText)' bufferCount=\(buffer.keystrokeCount)")
+        if composingText.isEmpty && buffer.isEmpty {
+            return false
+        }
+        if composingText.isEmpty && !buffer.isEmpty {
+            buffer.clear()
+            return false
         }
         composingText.removeLast()
         buffer.removeLast()
