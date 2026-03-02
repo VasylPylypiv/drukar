@@ -40,3 +40,4 @@ Packages/
 
 # Release builds (uploaded to GitHub Releases)
 release/
+.DS_Store

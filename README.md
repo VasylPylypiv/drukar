@@ -74,7 +74,7 @@ cp -R Drukar.app ~/Library/Input\ Methods/
 Requires macOS 14.0+, Xcode 16.0+, [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
 ```bash
-git clone https://github.com/AulonaV/drukar.git
+git clone https://github.com/VasylPylypiv/drukar.git
 cd drukar
 xcodegen generate
 open Drukar.xcodeproj
