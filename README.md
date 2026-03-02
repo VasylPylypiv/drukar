@@ -4,6 +4,14 @@
 
 No more `Ghbdsn` instead of `Привіт`. No more `ру|щ` instead of `hello`.
 
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/demo.mp4" width="600" autoplay loop muted>
+    Your browser does not support the video tag.
+  </video>
+</p>
+
+> **Note:** The video above will render after publishing to GitHub. To preview locally, open `assets/demo.mp4`.
+
 Drukar intercepts keystrokes *before* they reach your app, analyzes both possible interpretations (UA and EN), and commits the correct one — all in under a millisecond.
 
 ## Why?

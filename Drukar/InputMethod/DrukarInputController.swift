@@ -95,7 +95,7 @@ class DrukarInputController: IMKInputController {
 
         let keyCode = event.keyCode
 
-        if keyCode == UInt16(kVK_Delete) {
+        if keyCode == UInt16(kVK_Delete) || keyCode == UInt16(kVK_ForwardDelete) {
             return handleBackspace(client: client)
         }
 
