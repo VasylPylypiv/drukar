@@ -5,7 +5,9 @@
 No more `Ghbdsn` instead of `Привіт`. No more `ру|щ` instead of `hello`.
 
 <p align="center">
-  <img src="assets/demo.gif" alt="Drukar demo — typing Ukrainian and English without switching layout" width="600">
+
+https://github.com/user-attachments/assets/f8591be9-aae8-448d-80f4-96012dcf1a1e
+
 </p>
 
 Drukar intercepts keystrokes *before* they reach your app, analyzes both possible interpretations (UA and EN), and commits the correct one — all in under a millisecond.
