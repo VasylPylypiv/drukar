@@ -25,7 +25,6 @@ class DrukarInputController: IMKInputController {
     }
 
     private nonisolated(unsafe) static var forceEnglish = false
-    private nonisolated(unsafe) static var autocorrectEnabled = true
 
     private var mode: InputMode {
         if Self.forceEnglish { return .english }
@@ -59,6 +58,8 @@ class DrukarInputController: IMKInputController {
         if let client = sender as? IMKTextInput {
             let bundleID = client.bundleIdentifier() ?? ""
             isExcludedApp = Self.excludedBundleIDs.contains(bundleID)
+                || DrukarSettings.shared.isExcludedApp(bundleID)
+                || bundleID == DrukarApp.bundleIdentifier
             DrukarLog.info("activateServer: mapsReady=\(mapsReady) app=\(bundleID) excluded=\(isExcludedApp)")
         }
     }
@@ -104,7 +105,7 @@ class DrukarInputController: IMKInputController {
         menu.addItem(NSMenuItem.separator())
 
         let autocorrectItem = NSMenuItem(
-            title: Self.autocorrectEnabled ? "✓ Автовиправлення" : "  Автовиправлення",
+            title: DrukarSettings.shared.autocorrectEnabled ? "✓ Автовиправлення" : "  Автовиправлення",
             action: #selector(toggleAutocorrect(_:)),
             keyEquivalent: ""
         )
@@ -112,6 +113,14 @@ class DrukarInputController: IMKInputController {
         menu.addItem(autocorrectItem)
 
         menu.addItem(NSMenuItem.separator())
+
+        let settingsItem = NSMenuItem(
+            title: "Налаштування...",
+            action: #selector(openSettings(_:)),
+            keyEquivalent: ","
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
 
         let aboutItem = NSMenuItem(
             title: "Про Друкар v0.2",
@@ -135,8 +144,13 @@ class DrukarInputController: IMKInputController {
     }
 
     @objc private func toggleAutocorrect(_ sender: Any?) {
-        Self.autocorrectEnabled = !Self.autocorrectEnabled
-        DrukarLog.info("Autocorrect: \(Self.autocorrectEnabled)")
+        let settings = DrukarSettings.shared
+        settings.autocorrectEnabled = !settings.autocorrectEnabled
+        DrukarLog.info("Autocorrect: \(settings.autocorrectEnabled)")
+    }
+
+    @objc private func openSettings(_ sender: Any?) {
+        SettingsWindowController.shared.showSettings()
     }
 
     @objc private func showAbout(_ sender: Any?) {
@@ -418,21 +432,23 @@ class DrukarInputController: IMKInputController {
         // IT slang dictionary (protects "логи", "деплой" etc. from autocorrect)
         let enIsIT = ITDictionary.isKnownITWord(enLetters, language: "en")
         let uaIsIT = ITDictionary.isKnownITWord(uaLetters, language: "uk")
+        let enIsCustom = DrukarSettings.shared.isCustomWord(enLetters, language: "en")
+        let uaIsCustom = DrukarSettings.shared.isCustomWord(uaLetters, language: "uk")
 
-        if uaIsIT && !enIsIT {
-            DrukarLog.debug("IT dict: '\(uaWord)' (UA IT term)")
+        if (uaIsIT || uaIsCustom) && !(enIsIT || enIsCustom) {
+            DrukarLog.debug("custom/IT dict: '\(uaWord)' (UA)")
             return uaWord
         }
-        if enIsIT && !uaIsIT {
-            DrukarLog.debug("IT dict: '\(enWord)' (EN IT term)")
+        if (enIsIT || enIsCustom) && !(uaIsIT || uaIsCustom) {
+            DrukarLog.debug("custom/IT dict: '\(enWord)' (EN)")
             return enWord
         }
-        if enIsIT && uaIsIT {
+        if (enIsIT || enIsCustom) && (uaIsIT || uaIsCustom) {
             return detectedLanguageIsUkrainian ? uaWord : enWord
         }
 
         // Autocorrect (edit distance 1, same first letter, min 4 chars)
-        if Self.autocorrectEnabled {
+        if DrukarSettings.shared.autocorrectEnabled {
             let uaCorrection = safeCorrection(for: uaLetters, language: "uk")
             let enCorrection = safeCorrection(for: enLetters, language: "en")
 

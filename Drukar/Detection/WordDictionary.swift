@@ -36,14 +36,19 @@ final class WordDictionary {
             inSpellDocumentWithTag: 0
         )
 
-        guard let first = guesses?.first else { return nil }
+        guard let guesses, !guesses.isEmpty else { return nil }
 
-        let distance = editDistance(lowered, first.lowercased())
-        guard distance <= 1 else { return nil }
+        for guess in guesses.prefix(5) {
+            let distance = editDistance(lowered, guess.lowercased())
+            if distance <= 1 {
+                return guess
+            }
+        }
 
-        return first
+        return nil
     }
 
+    /// Damerau-Levenshtein distance: counts transpositions as single edit
     private func editDistance(_ a: String, _ b: String) -> Int {
         let a = Array(a)
         let b = Array(b)
@@ -52,18 +57,20 @@ final class WordDictionary {
         if m == 0 { return n }
         if n == 0 { return m }
 
+        var prev2 = [Int](repeating: 0, count: n + 1)
         var prev = Array(0...n)
         var curr = [Int](repeating: 0, count: n + 1)
 
         for i in 1...m {
             curr[0] = i
             for j in 1...n {
-                if a[i - 1] == b[j - 1] {
-                    curr[j] = prev[j - 1]
-                } else {
-                    curr[j] = min(prev[j - 1], prev[j], curr[j - 1]) + 1
+                let cost = a[i - 1] == b[j - 1] ? 0 : 1
+                curr[j] = min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
+                if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
+                    curr[j] = min(curr[j], prev2[j - 2] + cost)
                 }
             }
+            prev2 = prev
             prev = curr
         }
         return prev[n]
