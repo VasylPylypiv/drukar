@@ -24,10 +24,12 @@ class DrukarInputController: IMKInputController {
         case english
     }
 
-    // Mode is determined by Caps Lock state: LED on = English, LED off = Auto
+    private nonisolated(unsafe) static var forceEnglish = false
+    private nonisolated(unsafe) static var autocorrectEnabled = true
+
     private var mode: InputMode {
-        // Check actual hardware Caps Lock state
-        NSEvent.modifierFlags.contains(.capsLock) ? .english : .auto
+        if Self.forceEnglish { return .english }
+        return NSEvent.modifierFlags.contains(.capsLock) ? .english : .auto
     }
 
     // MARK: - Lifecycle
@@ -76,6 +78,74 @@ class DrukarInputController: IMKInputController {
             composingText = ""
             buffer.clear()
         }
+    }
+
+    // MARK: - Menu
+
+    override func menu() -> NSMenu! {
+        let menu = NSMenu(title: "Drukar")
+
+        let modeItem = NSMenuItem(
+            title: mode == .auto ? "✓ Авто-визначення" : "  Авто-визначення",
+            action: #selector(toggleAutoMode(_:)),
+            keyEquivalent: ""
+        )
+        modeItem.target = self
+        menu.addItem(modeItem)
+
+        let enItem = NSMenuItem(
+            title: mode == .english ? "✓ Тільки English" : "  Тільки English",
+            action: #selector(toggleEnglishMode(_:)),
+            keyEquivalent: ""
+        )
+        enItem.target = self
+        menu.addItem(enItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let autocorrectItem = NSMenuItem(
+            title: Self.autocorrectEnabled ? "✓ Автовиправлення" : "  Автовиправлення",
+            action: #selector(toggleAutocorrect(_:)),
+            keyEquivalent: ""
+        )
+        autocorrectItem.target = self
+        menu.addItem(autocorrectItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let aboutItem = NSMenuItem(
+            title: "Про Друкар v0.2",
+            action: #selector(showAbout(_:)),
+            keyEquivalent: ""
+        )
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+
+        return menu
+    }
+
+    @objc private func toggleAutoMode(_ sender: Any?) {
+        Self.forceEnglish = false
+        DrukarLog.info("Mode: Auto")
+    }
+
+    @objc private func toggleEnglishMode(_ sender: Any?) {
+        Self.forceEnglish = !Self.forceEnglish
+        DrukarLog.info("Mode: \(Self.forceEnglish ? "English" : "Auto")")
+    }
+
+    @objc private func toggleAutocorrect(_ sender: Any?) {
+        Self.autocorrectEnabled = !Self.autocorrectEnabled
+        DrukarLog.info("Autocorrect: \(Self.autocorrectEnabled)")
+    }
+
+    @objc private func showAbout(_ sender: Any?) {
+        let alert = NSAlert()
+        alert.messageText = "Друкар (Drukar) v0.2"
+        alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nCaps Lock = переключити на English\n\ngithub.com/VasylPylypiv/drukar"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     // MARK: - Event Handling
@@ -362,20 +432,22 @@ class DrukarInputController: IMKInputController {
         }
 
         // Autocorrect (edit distance 1, same first letter, min 4 chars)
-        let uaCorrection = safeCorrection(for: uaLetters, language: "uk")
-        let enCorrection = safeCorrection(for: enLetters, language: "en")
+        if Self.autocorrectEnabled {
+            let uaCorrection = safeCorrection(for: uaLetters, language: "uk")
+            let enCorrection = safeCorrection(for: enLetters, language: "en")
 
-        if let uaFixed = uaCorrection, enCorrection == nil {
-            DrukarLog.debug("autocorrect: '\(uaWord)' → '\(uaFixed)' (UA)")
-            return uaFixed
-        }
-        if let enFixed = enCorrection, uaCorrection == nil {
-            DrukarLog.debug("autocorrect: '\(enWord)' → '\(enFixed)' (EN)")
-            return enFixed
-        }
-        if let uaFixed = uaCorrection, let enFixed = enCorrection {
-            DrukarLog.debug("autocorrect: both UA='\(uaFixed)' EN='\(enFixed)', using context")
-            return detectedLanguageIsUkrainian ? uaFixed : enFixed
+            if let uaFixed = uaCorrection, enCorrection == nil {
+                DrukarLog.debug("autocorrect: '\(uaWord)' → '\(uaFixed)' (UA)")
+                return uaFixed
+            }
+            if let enFixed = enCorrection, uaCorrection == nil {
+                DrukarLog.debug("autocorrect: '\(enWord)' → '\(enFixed)' (EN)")
+                return enFixed
+            }
+            if let uaFixed = uaCorrection, let enFixed = enCorrection {
+                DrukarLog.debug("autocorrect: both UA='\(uaFixed)' EN='\(enFixed)', using context")
+                return detectedLanguageIsUkrainian ? uaFixed : enFixed
+            }
         }
 
         // Bigram analysis (fallback for words not in any dictionary)
