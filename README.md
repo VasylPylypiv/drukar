@@ -12,6 +12,19 @@ https://github.com/user-attachments/assets/f8591be9-aae8-448d-80f4-96012dcf1a1e
 
 Drukar intercepts keystrokes *before* they reach your app, analyzes both possible interpretations (UA and EN), and commits the correct one — all in under a millisecond.
 
+## Features
+
+- **Auto-detection** — type in any layout, Drukar figures out the language
+- **Atomic replacement** — no backspace flicker, text appears correct from the start
+- **Autocorrect** — fixes typos like "привт" → "привіт", "tset" → "test" (Damerau-Levenshtein, distance 1)
+- **IT dictionary** — 150+ built-in Ukrainian IT terms (логи, деплой, кеш, юзер, фіча...)
+- **Custom dictionary** — add your own words via Settings
+- **Caps Lock = English mode** — LED on = forced English, LED off = auto-detect
+- **Settings UI** — configure autocorrect, word length, custom dictionary, app exclusions
+- **Menu bar menu** — click "Д" icon to toggle modes, open settings
+- **Per-app exclusion** — auto-disabled in Terminal, iTerm2, Kitty, Warp; add your own
+- **Lightweight** — 0.02% CPU, 6 MB memory, 140 KB download
+
 ## Why?
 
 Every Ukrainian developer knows the pain: you start typing a Slack message and realize three words in that your keyboard layout was wrong. You delete everything, switch layout, retype. Multiple times a day. Every day.
@@ -35,7 +48,10 @@ Drukar is different:
 3. Text appears as **underlined composing text** (like CJK input methods) while you type
 4. On word boundary (space, enter), Drukar evaluates both interpretations:
    - **Dictionary lookup** via `NSSpellChecker` (100K+ words per language)
-   - **Bigram frequency analysis** as fallback
+   - **IT slang dictionary** (150+ Ukrainian tech terms)
+   - **Custom user dictionary** (added via Settings)
+   - **Autocorrect** (Damerau-Levenshtein distance 1, same first letter)
+   - **Bigram frequency analysis** as final fallback
    - **Single-letter word whitelist** (і, я, в, a, I)
 5. The correct interpretation is committed atomically
 6. Language context carries over: after a Ukrainian word, the next word displays in Cyrillic; after English — in Latin
@@ -45,14 +61,7 @@ Drukar is different:
 ### Quick Install (no Xcode needed)
 
 1. Download `Drukar.app.zip` from [Releases](../../releases)
-2. Unzip and run the installer:
-
-```bash
-unzip Drukar.app.zip
-./install.sh
-```
-
-Or install manually:
+2. Unzip and copy to Input Methods:
 
 ```bash
 unzip Drukar.app.zip
@@ -94,43 +103,31 @@ Drukar/
 ├── Detection/
 │   ├── DualBuffer.swift         # Dual EN/UA keystroke buffer
 │   ├── LanguageDetector.swift   # Bigram tables and scoring
-│   ├── WordDictionary.swift     # NSSpellChecker wrapper
-│   └── CharacterMapper.swift    # UCKeyTranslate keycode↔character mapping
+│   ├── WordDictionary.swift     # NSSpellChecker + autocorrect
+│   ├── CharacterMapper.swift    # UCKeyTranslate keycode↔character mapping
+│   └── ITDictionary.swift       # Built-in IT slang (150+ words)
+├── Settings/
+│   ├── DrukarSettings.swift     # UserDefaults persistence
+│   ├── SettingsView.swift       # SwiftUI settings window
+│   └── SettingsWindowController.swift
 └── Resources/
     ├── Info.plist               # IMK configuration
     └── Assets.xcassets/
 ```
 
-## Test Results
-
-All 9 test chapters passed:
-
-| Chapter | Status |
-|---|---|
-| Basic detection (UA/EN words) | Passed |
-| Mid-text language switching | Passed |
-| Problematic words (short, IT terms) | Passed* |
-| Special characters & punctuation | Passed |
-| Backspace & editing | Passed |
-| Modifier keys (Cmd, Ctrl, arrows) | Passed |
-| App compatibility (TextEdit, Safari, VS Code, Sublime, Finder, Spotlight) | Passed |
-| Stability & performance (CPU 0.02%, Memory 6.1 MB) | Passed |
-| Punctuation as word boundary | Passed |
-
-*Known limitations: Terminal.app doesn't fully support IMK marked text; IT jargon not in NSSpellChecker relies on bigram context.
-
 ## Performance
 
 - **CPU**: 0.02% idle, <5% during typing
-- **Private Memory**: 6.1 MB
+- **Private Memory**: 6 MB
 - **Threads**: 4
 - **Hangs**: 0
+- **Download**: 140 KB
 
 ## Known Limitations
 
-- **Terminal.app** — doesn't support IMK `setMarkedText` properly
-- **IT jargon** (e.g., "кешування") — not in NSSpellChecker dictionary, detected via bigrams + language context
-- **Ambiguous short words** (e.g., "це"/"wt" — both valid in their dictionaries) — resolved by language context from previous word
+- **Terminal apps** — Terminal.app, iTerm2 etc. are auto-excluded (don't support IMK marked text)
+- **Ambiguous short words** (e.g., "це"/"wt" — both valid in dictionaries) — resolved by language context from previous word
+- **Intermittent state issues** in Telegram/Slack after rapid window switching
 
 ## Background
 
@@ -142,11 +139,11 @@ Drukar is a clean-room rewrite using InputMethodKit — the proper macOS API for
 
 Issues and PRs are welcome. The main areas that need improvement:
 
-- [ ] Better heuristics for ambiguous words (both valid in EN and UA dictionaries)
-- [ ] Custom user dictionary for IT/domain-specific terms
-- [ ] Settings UI (enable/disable, minimum word length, exclusion list)
-- [ ] Menu bar status indicator
-- [ ] Per-app exclusion list (e.g., disable in Terminal)
+- [ ] Undo correction (backspace after space reverts to original)
+- [ ] Support for more language pairs (RU/EN, PL/EN, etc.)
+- [ ] Improved heuristics for words valid in both languages
+- [ ] Apple Developer ID signing (eliminate "unidentified developer" warning)
+- [ ] Homebrew Cask distribution
 
 ## License
 
