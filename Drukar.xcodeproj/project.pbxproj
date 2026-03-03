@@ -10,6 +10,7 @@
 		0BFE7664D8EEEA71C00B90A7 /* LayoutResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D31169150A3DD22C0F0E70D /* LayoutResolver.swift */; };
 		4B9D4E5FFFC211DBA0F96820 /* DrukarInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01ECB0BDEC5484C3A6D98B2 /* DrukarInputController.swift */; };
 		72E492EC8C80A8F51EBA6683 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F93B5D5095F396A34E761A99 /* Assets.xcassets */; };
+		89FA0C71D50979FFCE8504E8 /* ITDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AFC8A0F095C8AA366299C7A /* ITDictionary.swift */; };
 		963985C5BF338FD00C63D082 /* WordDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 611DAF7742645848E2BA7726 /* WordDictionary.swift */; };
 		9B503423080C69ABE08272A9 /* DrukarLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF761C2C620FCEEA23E319F /* DrukarLog.swift */; };
 		AAE1F1512A8AE8E10A8A8F0B /* drukar-menubar.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 74512043E545177E3C77962E /* drukar-menubar.tiff */; };
@@ -25,6 +26,7 @@
 		06D2223EF23F22994178C403 /* DualBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualBuffer.swift; sourceTree = "<group>"; };
 		0B4824FDD6B2D60EEAB77793 /* Drukar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Drukar.entitlements; sourceTree = "<group>"; };
 		22A598A938EBB7171C1582F3 /* LanguageDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetector.swift; sourceTree = "<group>"; };
+		2AFC8A0F095C8AA366299C7A /* ITDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ITDictionary.swift; sourceTree = "<group>"; };
 		2DF761C2C620FCEEA23E319F /* DrukarLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrukarLog.swift; sourceTree = "<group>"; };
 		36C5FDDB40D193FB92C0EAB8 /* CharacterMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterMapper.swift; sourceTree = "<group>"; };
 		3FD5B770441A4780A1B3A6B6 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -64,6 +66,7 @@
 			children = (
 				36C5FDDB40D193FB92C0EAB8 /* CharacterMapper.swift */,
 				06D2223EF23F22994178C403 /* DualBuffer.swift */,
+				2AFC8A0F095C8AA366299C7A /* ITDictionary.swift */,
 				22A598A938EBB7171C1582F3 /* LanguageDetector.swift */,
 				611DAF7742645848E2BA7726 /* WordDictionary.swift */,
 			);
@@ -186,6 +189,7 @@
 				4B9D4E5FFFC211DBA0F96820 /* DrukarInputController.swift in Sources */,
 				9B503423080C69ABE08272A9 /* DrukarLog.swift in Sources */,
 				D3DF8C7CB61F72A353EB3CAB /* DualBuffer.swift in Sources */,
+				89FA0C71D50979FFCE8504E8 /* ITDictionary.swift in Sources */,
 				AFA925FBF65FADE147D24B24 /* LanguageDetector.swift in Sources */,
 				0BFE7664D8EEEA71C00B90A7 /* LayoutResolver.swift in Sources */,
 				963985C5BF338FD00C63D082 /* WordDictionary.swift in Sources */,

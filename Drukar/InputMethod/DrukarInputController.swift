@@ -311,6 +311,20 @@ class DrukarInputController: IMKInputController {
             return fallbackToLastLayout(enWord: enWord, uaWord: uaWord)
         }
 
+        // When one interpretation has more letters (other has punctuation instead),
+        // e.g., "юзер" (4 letters) vs ".pth" (3 letters) — "ю" maps to "." on EN.
+        if enWord.count == uaWord.count && uaLetters.count != enLetters.count {
+            let moreLettersIsUA = uaLetters.count > enLetters.count
+            let moreLettersWord = moreLettersIsUA ? uaWord : enWord
+            let moreLettersStr = moreLettersIsUA ? uaLetters : enLetters
+            let lang = moreLettersIsUA ? "uk" : "en"
+
+            if dictionary.isKnownWord(moreLettersStr, language: lang) {
+                DrukarLog.debug("letter-count: '\(moreLettersWord)' wins (more letters + in dict)")
+                return moreLettersWord
+            }
+        }
+
         let enInDict = dictionary.isKnownEnglishWord(enLetters)
         let uaInDict = dictionary.isKnownUkrainianWord(uaLetters)
 
@@ -331,6 +345,40 @@ class DrukarInputController: IMKInputController {
         if enInDict { return enWord }
         if uaInDict { return uaWord }
 
+        // IT slang dictionary (protects "логи", "деплой" etc. from autocorrect)
+        let enIsIT = ITDictionary.isKnownITWord(enLetters, language: "en")
+        let uaIsIT = ITDictionary.isKnownITWord(uaLetters, language: "uk")
+
+        if uaIsIT && !enIsIT {
+            DrukarLog.debug("IT dict: '\(uaWord)' (UA IT term)")
+            return uaWord
+        }
+        if enIsIT && !uaIsIT {
+            DrukarLog.debug("IT dict: '\(enWord)' (EN IT term)")
+            return enWord
+        }
+        if enIsIT && uaIsIT {
+            return detectedLanguageIsUkrainian ? uaWord : enWord
+        }
+
+        // Autocorrect (edit distance 1, same first letter, min 4 chars)
+        let uaCorrection = safeCorrection(for: uaLetters, language: "uk")
+        let enCorrection = safeCorrection(for: enLetters, language: "en")
+
+        if let uaFixed = uaCorrection, enCorrection == nil {
+            DrukarLog.debug("autocorrect: '\(uaWord)' → '\(uaFixed)' (UA)")
+            return uaFixed
+        }
+        if let enFixed = enCorrection, uaCorrection == nil {
+            DrukarLog.debug("autocorrect: '\(enWord)' → '\(enFixed)' (EN)")
+            return enFixed
+        }
+        if let uaFixed = uaCorrection, let enFixed = enCorrection {
+            DrukarLog.debug("autocorrect: both UA='\(uaFixed)' EN='\(enFixed)', using context")
+            return detectedLanguageIsUkrainian ? uaFixed : enFixed
+        }
+
+        // Bigram analysis (fallback for words not in any dictionary)
         let enScore = detector.commonBigramScore(word: enWord, forUkrainian: false)
         let uaScore = detector.commonBigramScore(word: uaWord, forUkrainian: true)
 
@@ -341,6 +389,13 @@ class DrukarInputController: IMKInputController {
         if uaScore >= 0.3 && uaScore > enScore + threshold { return uaWord }
 
         return fallbackToLastLayout(enWord: enWord, uaWord: uaWord)
+    }
+
+    private func safeCorrection(for word: String, language: String) -> String? {
+        guard word.count >= 4 else { return nil }
+        guard let corrected = dictionary.correction(for: word, language: language) else { return nil }
+        guard corrected.lowercased().first == word.lowercased().first else { return nil }
+        return corrected
     }
 
     private func fallbackToLastLayout(enWord: String, uaWord: String) -> String {
