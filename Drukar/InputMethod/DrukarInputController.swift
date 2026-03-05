@@ -3,9 +3,6 @@ import InputMethodKit
 import Carbon.HIToolbox
 import NaturalLanguage
 
-/// Main input controller — one instance per client (app window).
-/// IMK calls `handle(_:client:)` for each key event BEFORE it reaches the app.
-/// We MUST handle all printable input — returning false means the keystroke is dropped.
 class DrukarInputController: IMKInputController {
     private let buffer = DualBuffer()
     private let detector = LanguageDetector()
@@ -16,14 +13,29 @@ class DrukarInputController: IMKInputController {
     private var uaLayoutID: String?
     private var mapsReady = false
 
+    // MARK: - State Machine
+
+    private enum State {
+        case idle
+        case composing
+        case pending(PendingWord)
+    }
+
+    private struct PendingWord {
+        let enWord: String
+        let uaWord: String
+        let displayText: String
+        let keystrokes: [DualKeystroke]
+    }
+
+    private var state: State = .idle
     private var composingText = ""
+    private var detectedLanguageIsUkrainian = true
+    private var lastCommittedWord = ""
 
     // MARK: - Input Mode
 
-    enum InputMode {
-        case auto
-        case english
-    }
+    enum InputMode { case auto, english }
 
     private nonisolated(unsafe) static var forceEnglish = false
 
@@ -40,20 +52,15 @@ class DrukarInputController: IMKInputController {
     }
 
     private static let excludedBundleIDs: Set<String> = [
-        "com.apple.Terminal",
-        "com.googlecode.iterm2",
-        "net.kovidgoyal.kitty",
-        "com.github.wez.wezterm",
-        "co.zeit.hyper",
-        "dev.warp.Warp-Stable",
+        "com.apple.Terminal", "com.googlecode.iterm2", "net.kovidgoyal.kitty",
+        "com.github.wez.wezterm", "co.zeit.hyper", "dev.warp.Warp-Stable",
     ]
 
     private var isExcludedApp = false
 
     override func activateServer(_ sender: Any!) {
         super.activateServer(sender)
-        buffer.clear()
-        composingText = ""
+        resetState()
         if !mapsReady { resolveLayouts() }
 
         if let client = sender as? IMKTextInput {
@@ -61,24 +68,44 @@ class DrukarInputController: IMKInputController {
             isExcludedApp = Self.excludedBundleIDs.contains(bundleID)
                 || DrukarSettings.shared.isExcludedApp(bundleID)
                 || bundleID == DrukarApp.bundleIdentifier
-            DrukarLog.info("activateServer: mapsReady=\(mapsReady) app=\(bundleID) excluded=\(isExcludedApp)")
+            DrukarLog.info("activateServer: app=\(bundleID) excluded=\(isExcludedApp)")
         }
     }
 
     override func deactivateServer(_ sender: Any!) {
-        commitComposingText(sender as? IMKTextInput)
-        buffer.clear()
-        composingText = ""
+        commitAllPending(sender as? IMKTextInput)
         super.deactivateServer(sender)
     }
 
     override func commitComposition(_ sender: Any!) {
-        DrukarLog.debug("commitComposition called, composing='\(composingText)'")
-        if let client = sender as? IMKTextInput {
-            commitComposingText(client)
-        } else {
+        commitAllPending(sender as? IMKTextInput)
+    }
+
+    private func resetState() {
+        state = .idle
+        composingText = ""
+        buffer.clear()
+    }
+
+    private func commitAllPending(_ client: IMKTextInput?) {
+        guard let client else { resetState(); return }
+        switch state {
+        case .pending(let pw):
+            let word = detectedLanguageIsUkrainian ? pw.uaWord : pw.enWord
+            client.insertText(word + " ", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            DrukarLog.debug("commitPending as-is: '\(word)'")
+            state = .idle
             composingText = ""
             buffer.clear()
+        case .composing:
+            if !composingText.isEmpty {
+                client.insertText(composingText, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            }
+            state = .idle
+            composingText = ""
+            buffer.clear()
+        case .idle:
+            break
         }
     }
 
@@ -87,19 +114,13 @@ class DrukarInputController: IMKInputController {
     override func menu() -> NSMenu! {
         let menu = NSMenu(title: "Drukar")
 
-        let modeItem = NSMenuItem(
-            title: mode == .auto ? "✓ Авто-визначення" : "  Авто-визначення",
-            action: #selector(toggleAutoMode(_:)),
-            keyEquivalent: ""
-        )
+        let modeItem = NSMenuItem(title: mode == .auto ? "✓ Авто-визначення" : "  Авто-визначення",
+                                  action: #selector(toggleAutoMode(_:)), keyEquivalent: "")
         modeItem.target = self
         menu.addItem(modeItem)
 
-        let enItem = NSMenuItem(
-            title: mode == .english ? "✓ Тільки English" : "  Тільки English",
-            action: #selector(toggleEnglishMode(_:)),
-            keyEquivalent: ""
-        )
+        let enItem = NSMenuItem(title: mode == .english ? "✓ Тільки English" : "  Тільки English",
+                                action: #selector(toggleEnglishMode(_:)), keyEquivalent: "")
         enItem.target = self
         menu.addItem(enItem)
 
@@ -107,60 +128,38 @@ class DrukarInputController: IMKInputController {
 
         let autocorrectItem = NSMenuItem(
             title: DrukarSettings.shared.autocorrectEnabled ? "✓ Автовиправлення" : "  Автовиправлення",
-            action: #selector(toggleAutocorrect(_:)),
-            keyEquivalent: ""
-        )
+            action: #selector(toggleAutocorrect(_:)), keyEquivalent: "")
         autocorrectItem.target = self
         menu.addItem(autocorrectItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        let settingsItem = NSMenuItem(
-            title: "Налаштування...",
-            action: #selector(openSettings(_:)),
-            keyEquivalent: ","
-        )
+        let settingsItem = NSMenuItem(title: "Налаштування...", action: #selector(openSettings(_:)), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
-        let aboutItem = NSMenuItem(
-            title: "Про Друкар v0.2",
-            action: #selector(showAbout(_:)),
-            keyEquivalent: ""
-        )
+        let aboutItem = NSMenuItem(title: "Про Друкар v0.3", action: #selector(showAbout(_:)), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 
         return menu
     }
 
-    @objc private func toggleAutoMode(_ sender: Any?) {
-        Self.forceEnglish = false
-        DrukarLog.info("Mode: Auto")
-    }
-
-    @objc private func toggleEnglishMode(_ sender: Any?) {
-        Self.forceEnglish = !Self.forceEnglish
-        DrukarLog.info("Mode: \(Self.forceEnglish ? "English" : "Auto")")
-    }
-
+    @objc private func toggleAutoMode(_ sender: Any?) { Self.forceEnglish = false }
+    @objc private func toggleEnglishMode(_ sender: Any?) { Self.forceEnglish = !Self.forceEnglish }
     @objc private func toggleAutocorrect(_ sender: Any?) {
-        let settings = DrukarSettings.shared
-        settings.autocorrectEnabled = !settings.autocorrectEnabled
-        DrukarLog.info("Autocorrect: \(settings.autocorrectEnabled)")
+        DrukarSettings.shared.autocorrectEnabled = !DrukarSettings.shared.autocorrectEnabled
     }
-
-    @objc private func openSettings(_ sender: Any?) {
-        SettingsWindowController.shared.showSettings()
-    }
-
+    @objc private func openSettings(_ sender: Any?) { SettingsWindowController.shared.showSettings() }
     @objc private func showAbout(_ sender: Any?) {
-        let alert = NSAlert()
-        alert.messageText = "Друкар (Drukar) v0.2"
-        alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nCaps Lock = переключити на English\n\ngithub.com/VasylPylypiv/drukar"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = "Друкар (Drukar) v0.3"
+            alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nCaps Lock = English mode\n\ngithub.com/VasylPylypiv/drukar"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
     }
 
     // MARK: - Event Handling
@@ -168,174 +167,311 @@ class DrukarInputController: IMKInputController {
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event, event.type == .keyDown else { return false }
         guard let client = sender as? IMKTextInput else { return false }
-
         if isExcludedApp { return false }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let keyCode = event.keyCode
 
         if modifiers.contains(.command) || modifiers.contains(.control) {
-            commitComposingText(client)
+            commitAllPending(client)
             return false
         }
-
-        let keyCode = event.keyCode
 
         if keyCode == UInt16(kVK_Delete) || keyCode == UInt16(kVK_ForwardDelete) {
             return handleBackspace(client: client)
         }
 
         if keyCode == UInt16(kVK_Escape) {
-            if composingText.isEmpty { return false }
-            cancelComposingText(client)
+            if case .idle = state { return false }
+            cancelAll(client)
             return true
         }
 
-        if isArrowOrNavigationKey(keyCode) {
-            commitComposingText(client)
+        if isArrowOrNavigationKey(keyCode) || keyCode > 0x7E {
+            commitAllPending(client)
             return false
         }
 
-        // Any function keys or unknown keys — commit and pass through
-        if keyCode > 0x7E {
-            commitComposingText(client)
-            return false
+        // EN mode bypass
+        if mode == .english {
+            commitAllPending(client)
+            return handleEnglishMode(event: event, keyCode: keyCode, client: client)
         }
 
+        // Word boundaries: space, enter, tab
         if DualBuffer.wordBoundaryKeyCodes.contains(keyCode) {
             let isSpace = keyCode == 0x31
-            if mode == .english {
-                commitComposingText(client)
-                return !isSpace ? false : {
-                    client.insertText(" ", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-                    return true
-                }()
-            }
-            handleWordBoundary(keyCode: keyCode, insertBoundary: isSpace, client: client)
+            handleWordBoundary(isSpace: isSpace, client: client)
             return isSpace
+        }
+
+        // Punctuation as word boundary
+        if isPunctuation(event) {
+            handlePunctuation(event: event, client: client)
+            return true
         }
 
         return handleCharacterInput(event: event, keyCode: keyCode, client: client)
     }
 
+    // MARK: - English Mode
+
+    private func handleEnglishMode(event: NSEvent, keyCode: UInt16, client: IMKTextInput) -> Bool {
+        if DualBuffer.wordBoundaryKeyCodes.contains(keyCode) {
+            let isSpace = keyCode == 0x31
+            if isSpace {
+                client.insertText(" ", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                return true
+            }
+            return false
+        }
+        if mapsReady, let enID = enLayoutID,
+           let enChar = characterMapper.characterForKeyCode(keyCode, shifted: event.modifierFlags.contains(.shift), sourceID: enID) {
+            client.insertText(String(enChar), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            return true
+        }
+        if let chars = event.characters, !chars.isEmpty {
+            client.insertText(chars, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            return true
+        }
+        return false
+    }
+
     // MARK: - Character Input
 
     private func handleCharacterInput(event: NSEvent, keyCode: UInt16, client: IMKTextInput) -> Bool {
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let isShifted = modifiers.contains(.shift)
+        let isShifted = event.modifierFlags.contains(.shift)
 
-        // EN mode: insert English character directly, no buffering
-        if mode == .english {
-            if mapsReady, let enID = enLayoutID {
-                if let enChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: enID) {
-                    client.insertText(String(enChar), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-                    return true
-                }
-            }
+        guard mapsReady, let enID = enLayoutID, let uaID = uaLayoutID else {
             if let chars = event.characters, !chars.isEmpty {
+                commitAllPending(client)
                 client.insertText(chars, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
                 return true
             }
             return false
         }
 
-        // Auto mode: buffer and detect
-        if mapsReady, let enID = enLayoutID, let uaID = uaLayoutID {
-            let enChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: enID)
-            let uaChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: uaID)
+        let enChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: enID)
+        let uaChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: uaID)
 
-            if enChar != nil || uaChar != nil {
-                buffer.append(DualKeystroke(keyCode: keyCode, enChar: enChar, uaChar: uaChar, isShifted: isShifted))
-
-                let typedChar = pickDisplayCharacter(enChar: enChar, uaChar: uaChar)
-                if let ch = typedChar {
-                    composingText.append(ch)
-                    updateMarkedText(composingText, client: client)
-                    return true
-                }
+        guard enChar != nil || uaChar != nil else {
+            if let chars = event.characters, !chars.isEmpty {
+                commitAllPending(client)
+                client.insertText(chars, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                return true
             }
+            return false
         }
 
-        // Fallback: maps not ready or unmapped key — insert event's characters directly
-        if let chars = event.characters, !chars.isEmpty {
-            commitComposingText(client)
-            client.insertText(chars, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+        buffer.append(DualKeystroke(keyCode: keyCode, enChar: enChar, uaChar: uaChar, isShifted: isShifted))
+
+        let displayChar = detectedLanguageIsUkrainian ? (uaChar ?? enChar) : (enChar ?? uaChar)
+        if let ch = displayChar {
+            composingText.append(ch)
+            updateMarkedText(client: client)
+            if case .idle = state { state = .composing }
             return true
         }
-
         return false
     }
 
-    private var detectedLanguageIsUkrainian = true
-    private var lastCommittedWord = ""
+    // MARK: - Word Boundary (Space)
 
-    private func pickDisplayCharacter(enChar: Character?, uaChar: Character?) -> Character? {
-        if detectedLanguageIsUkrainian {
-            return uaChar ?? enChar
-        }
-        return enChar ?? uaChar
-    }
-
-    // MARK: - Word Boundary
-
-    private func handleWordBoundary(keyCode: UInt16, insertBoundary: Bool, client: IMKTextInput) {
-        let boundaryChar = wordBoundaryCharacter(for: keyCode)
-
+    private func handleWordBoundary(isSpace: Bool, client: IMKTextInput) {
         guard !buffer.isEmpty else {
-            if insertBoundary {
-                // Clear any stale marked text state before inserting
-                if !composingText.isEmpty {
-                    composingText = ""
-                    client.setMarkedText("", selectionRange: NSRange(location: 0, length: 0),
-                                         replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-                }
-                client.insertText(boundaryChar, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            // Empty buffer — handle pending or insert space
+            if case .pending(let pw) = state {
+                let word = detectedLanguageIsUkrainian ? pw.uaWord : pw.enWord
+                client.insertText(word + " ", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                state = .idle
+                composingText = ""
+            } else if isSpace {
+                client.insertText(" ", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
             }
             return
         }
 
         let enWord = buffer.enWord
         let uaWord = buffer.uaWord
+        let enLetters = String(enWord.filter { $0.isLetter })
+        let uaLetters = String(uaWord.filter { $0.isLetter })
         buffer.clear()
         composingText = ""
 
         let correctedWord = evaluateBestInterpretation(enWord: enWord, uaWord: uaWord)
-        detectedLanguageIsUkrainian = (correctedWord == uaWord)
-        lastCommittedWord = correctedWord
-        DrukarLog.debug("boundary: en='\(enWord)' ua='\(uaWord)' → '\(correctedWord)' (nextUA=\(detectedLanguageIsUkrainian))")
+        let currentIsEN = (correctedWord != uaWord) || (!detectedLanguageIsUkrainian && correctedWord == enWord)
+        let enInDict = dictionary.isKnownEnglishWord(enLetters)
+        let uaInDict = dictionary.isKnownUkrainianWord(uaLetters)
+        let isAmbiguous = enInDict && uaInDict && enLetters.count == uaLetters.count
 
-        let textToInsert = insertBoundary ? correctedWord + boundaryChar : correctedWord
-        client.insertText(textToInsert, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+        // Check if current word resolves a PENDING ambiguous word
+        if case .pending(let pw) = state {
+            let pwEnLetters = String(pw.enWord.filter { $0.isLetter })
+            let pwUaLetters = String(pw.uaWord.filter { $0.isLetter })
+            let pwEnInDict = dictionary.isKnownEnglishWord(pwEnLetters)
+            let pwUaInDict = dictionary.isKnownUkrainianWord(pwUaLetters)
+            let currentWordIsUnambiguousEN = enInDict && !uaInDict
+            let currentWordIsUnambiguousUA = uaInDict && !enInDict
+
+            if currentWordIsUnambiguousEN && pwEnInDict {
+                // Current word is clearly EN → retrofix pending to EN
+                let retroWord = pw.enWord
+                DrukarLog.debug("retrofix: '\(pw.displayText)' → '\(retroWord)' (triggered by EN '\(correctedWord)')")
+                client.insertText(retroWord + " " + correctedWord + (isSpace ? " " : ""),
+                                  replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                detectedLanguageIsUkrainian = false
+                lastCommittedWord = correctedWord
+                state = .idle
+                return
+            } else if currentWordIsUnambiguousUA && pwUaInDict {
+                // Current word is clearly UA → retrofix pending to UA
+                let retroWord = pw.uaWord
+                DrukarLog.debug("retrofix: '\(pw.displayText)' → '\(retroWord)' (triggered by UA '\(correctedWord)')")
+                client.insertText(retroWord + " " + correctedWord + (isSpace ? " " : ""),
+                                  replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                detectedLanguageIsUkrainian = true
+                lastCommittedWord = correctedWord
+                state = .idle
+                return
+            } else {
+                // Can't resolve — commit pending as-is
+                let pendingWord = detectedLanguageIsUkrainian ? pw.uaWord : pw.enWord
+                client.insertText(pendingWord + " ", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                DrukarLog.debug("commitPending as-is: '\(pendingWord)'")
+            }
+        }
+
+        // Current word: ambiguous → go PENDING, otherwise commit
+        if isAmbiguous {
+            let displayWord = detectedLanguageIsUkrainian ? uaWord : enWord
+            let pending = PendingWord(enWord: enWord, uaWord: uaWord, displayText: displayWord,
+                                      keystrokes: [])
+            state = .pending(pending)
+            composingText = displayWord + " "
+            updateMarkedText(client: client)
+            DrukarLog.debug("→ PENDING: '\(displayWord)' (en='\(enWord)' ua='\(uaWord)')")
+        } else {
+            let textToInsert = isSpace ? correctedWord + " " : correctedWord
+            client.insertText(textToInsert, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            detectedLanguageIsUkrainian = !currentIsEN
+            lastCommittedWord = correctedWord
+            state = .idle
+            DrukarLog.debug("commit: '\(correctedWord)' (nextUA=\(detectedLanguageIsUkrainian))")
+        }
     }
 
-    private func wordBoundaryCharacter(for keyCode: UInt16) -> String {
-        switch keyCode {
-        case 0x31: return " "
-        case 0x24: return "\n"
-        case 0x30: return "\t"
-        case 0x4C: return "\n"
-        default: return " "
+    // MARK: - Punctuation
+
+    private static let punctuationChars: Set<Character> = [".", ",", "!", "?", ";", ":", "\"", "'", "(", ")", "-"]
+
+    private func isPunctuation(_ event: NSEvent) -> Bool {
+        guard let chars = event.characters, let ch = chars.first else { return false }
+        guard Self.punctuationChars.contains(ch) else { return false }
+
+        // Only treat as punctuation if NEITHER layout maps this key to a letter
+        let keyCode = event.keyCode
+        let isShifted = event.modifierFlags.contains(.shift)
+        if mapsReady {
+            if let enID = enLayoutID,
+               let enChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: enID),
+               enChar.isLetter { return false }
+            if let uaID = uaLayoutID,
+               let uaChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: uaID),
+               uaChar.isLetter { return false }
+        }
+        return true
+    }
+
+    private func handlePunctuation(event: NSEvent, client: IMKTextInput) {
+        let keyCode = event.keyCode
+        let isShifted = event.modifierFlags.contains(.shift)
+
+        // Get punctuation character from the correct layout
+        var punct = event.characters ?? ""
+        if mapsReady {
+            let layoutID = detectedLanguageIsUkrainian ? uaLayoutID : enLayoutID
+            if let id = layoutID, let ch = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: id) {
+                punct = String(ch)
+            }
+        }
+
+        // Commit pending as-is with punctuation
+        if case .pending(let pw) = state {
+            let word = detectedLanguageIsUkrainian ? pw.uaWord : pw.enWord
+            if buffer.isEmpty {
+                client.insertText(word + punct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            } else {
+                let currentWord = evaluateBestInterpretation(enWord: buffer.enWord, uaWord: buffer.uaWord)
+                client.insertText(word + " " + currentWord + punct,
+                                  replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                buffer.clear()
+            }
+            state = .idle
+            composingText = ""
+            return
+        }
+
+        // Commit current composing word with punctuation
+        if !buffer.isEmpty {
+            let enWord = buffer.enWord
+            let uaWord = buffer.uaWord
+            buffer.clear()
+            composingText = ""
+
+            let correctedWord = evaluateBestInterpretation(enWord: enWord, uaWord: uaWord)
+            detectedLanguageIsUkrainian = (correctedWord == uaWord)
+            lastCommittedWord = correctedWord
+            client.insertText(correctedWord + punct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            state = .idle
+        } else {
+            client.insertText(punct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
     }
 
     // MARK: - Backspace
 
     private func handleBackspace(client: IMKTextInput) -> Bool {
-        DrukarLog.debug("backspace: composing='\(composingText)' bufferCount=\(buffer.keystrokeCount)")
-        if composingText.isEmpty && buffer.isEmpty {
+        switch state {
+        case .pending(let pw):
+            if buffer.isEmpty {
+                // Backspace on pending word space → go back to COMPOSING the pending word
+                state = .composing
+                // Rebuild buffer from pending word's keystrokes
+                composingText = pw.displayText
+                // We don't have original keystrokes stored fully, so just show the text
+                updateMarkedText(client: client)
+                DrukarLog.debug("backspace: PENDING → COMPOSING '\(composingText)'")
+                return true
+            } else {
+                // Backspace on new word being typed after pending
+                composingText.removeLast()
+                buffer.removeLast()
+                updateMarkedText(client: client)
+                return true
+            }
+
+        case .composing:
+            if composingText.isEmpty { return false }
+            composingText.removeLast()
+            buffer.removeLast()
+            if composingText.isEmpty && buffer.isEmpty {
+                cancelAll(client)
+            } else {
+                updateMarkedText(client: client)
+            }
+            return true
+
+        case .idle:
             return false
         }
-        if composingText.isEmpty && !buffer.isEmpty {
-            buffer.clear()
-            return false
-        }
-        composingText.removeLast()
-        buffer.removeLast()
-        if composingText.isEmpty {
-            cancelComposingText(client)
-        } else {
-            updateMarkedText(composingText, client: client)
-        }
-        return true
+    }
+
+    private func cancelAll(_ client: IMKTextInput) {
+        state = .idle
+        composingText = ""
+        buffer.clear()
+        client.setMarkedText("", selectionRange: NSRange(location: 0, length: 0),
+                             replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
     }
 
     // MARK: - Navigation Keys
@@ -352,28 +488,25 @@ class DrukarInputController: IMKInputController {
         return navKeys.contains(keyCode)
     }
 
-    // MARK: - Marked Text (Composing Region)
+    // MARK: - Marked Text
 
-    private func updateMarkedText(_ text: String, client: IMKTextInput) {
-        let attrs: [NSAttributedString.Key: Any] = [
-            .underlineStyle: NSUnderlineStyle.single.rawValue,
-        ]
-        let attributed = NSAttributedString(string: text, attributes: attrs)
+    private func updateMarkedText(client: IMKTextInput) {
+        // Underline word part, not trailing space
+        let text = composingText
+        let wordPart = text.hasSuffix(" ") ? String(text.dropLast()) : text
+        let spacePart = text.hasSuffix(" ") ? " " : ""
+
+        let attributed = NSMutableAttributedString()
+        if !wordPart.isEmpty {
+            attributed.append(NSAttributedString(string: wordPart, attributes: [
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+            ]))
+        }
+        if !spacePart.isEmpty {
+            attributed.append(NSAttributedString(string: spacePart))
+        }
+
         client.setMarkedText(attributed, selectionRange: NSRange(location: text.count, length: 0),
-                             replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-    }
-
-    private func commitComposingText(_ client: IMKTextInput?) {
-        guard !composingText.isEmpty, let client else { return }
-        client.insertText(composingText, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-        composingText = ""
-        buffer.clear()
-    }
-
-    private func cancelComposingText(_ client: IMKTextInput) {
-        composingText = ""
-        buffer.clear()
-        client.setMarkedText("", selectionRange: NSRange(location: 0, length: 0),
                              replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
     }
 
@@ -387,27 +520,19 @@ class DrukarInputController: IMKInputController {
         let uaLetters = String(uaWord.filter { $0.isLetter })
 
         if enLetters.count <= 1 && uaLetters.count <= 1 {
-            let enLower = enLetters.lowercased()
-            let uaLower = uaLetters.lowercased()
-            let enIsSingle = Self.singleLetterEN.contains(enLower)
-            let uaIsSingle = Self.singleLetterUA.contains(uaLower)
-
+            let enIsSingle = Self.singleLetterEN.contains(enLetters.lowercased())
+            let uaIsSingle = Self.singleLetterUA.contains(uaLetters.lowercased())
             if uaIsSingle && !enIsSingle { return uaWord }
             if enIsSingle && !uaIsSingle { return enWord }
-            // Both valid (e.g. "a"/"ф") or neither — use fallback
-            return fallbackToLastLayout(enWord: enWord, uaWord: uaWord)
+            return detectedLanguageIsUkrainian ? uaWord : enWord
         }
 
-        // When one interpretation has more letters (other has punctuation instead),
-        // e.g., "юзер" (4 letters) vs ".pth" (3 letters) — "ю" maps to "." on EN.
         if enWord.count == uaWord.count && uaLetters.count != enLetters.count {
             let moreLettersIsUA = uaLetters.count > enLetters.count
             let moreLettersWord = moreLettersIsUA ? uaWord : enWord
             let moreLettersStr = moreLettersIsUA ? uaLetters : enLetters
             let lang = moreLettersIsUA ? "uk" : "en"
-
             if dictionary.isKnownWord(moreLettersStr, language: lang) {
-                DrukarLog.debug("letter-count: '\(moreLettersWord)' wins (more letters + in dict)")
                 return moreLettersWord
             }
         }
@@ -425,108 +550,64 @@ class DrukarInputController: IMKInputController {
         if enInDict { return enWord }
         if uaInDict { return uaWord }
 
-        // IT slang dictionary (protects "логи", "деплой" etc. from autocorrect)
         let enIsIT = ITDictionary.isKnownITWord(enLetters, language: "en")
         let uaIsIT = ITDictionary.isKnownITWord(uaLetters, language: "uk")
         let enIsCustom = DrukarSettings.shared.isCustomWord(enLetters, language: "en")
         let uaIsCustom = DrukarSettings.shared.isCustomWord(uaLetters, language: "uk")
 
-        if (uaIsIT || uaIsCustom) && !(enIsIT || enIsCustom) {
-            DrukarLog.debug("custom/IT dict: '\(uaWord)' (UA)")
-            return uaWord
-        }
-        if (enIsIT || enIsCustom) && !(uaIsIT || uaIsCustom) {
-            DrukarLog.debug("custom/IT dict: '\(enWord)' (EN)")
-            return enWord
-        }
+        if (uaIsIT || uaIsCustom) && !(enIsIT || enIsCustom) { return uaWord }
+        if (enIsIT || enIsCustom) && !(uaIsIT || uaIsCustom) { return enWord }
         if (enIsIT || enIsCustom) && (uaIsIT || uaIsCustom) {
             return detectedLanguageIsUkrainian ? uaWord : enWord
         }
 
-        // Autocorrect (edit distance 1, same first letter, min 4 chars)
         if DrukarSettings.shared.autocorrectEnabled {
             let uaCorrection = safeCorrection(for: uaLetters, language: "uk")
             let enCorrection = safeCorrection(for: enLetters, language: "en")
-
-            if let uaFixed = uaCorrection, enCorrection == nil {
-                DrukarLog.debug("autocorrect: '\(uaWord)' → '\(uaFixed)' (UA)")
-                return uaFixed
-            }
-            if let enFixed = enCorrection, uaCorrection == nil {
-                DrukarLog.debug("autocorrect: '\(enWord)' → '\(enFixed)' (EN)")
-                return enFixed
-            }
+            if let uaFixed = uaCorrection, enCorrection == nil { return uaFixed }
+            if let enFixed = enCorrection, uaCorrection == nil { return enFixed }
             if let uaFixed = uaCorrection, let enFixed = enCorrection {
-                DrukarLog.debug("autocorrect: both UA='\(uaFixed)' EN='\(enFixed)', using context")
                 return detectedLanguageIsUkrainian ? uaFixed : enFixed
             }
         }
 
-        // NL language detection (replaces bigrams — smarter, Apple ML model)
         let nlWinner = detectLanguageNL(uaWord: uaWord, enWord: enWord)
-        if let winner = nlWinner {
-            DrukarLog.debug("NL detect: '\(winner)'")
-            return winner
-        }
+        if let winner = nlWinner { return winner }
 
-        return fallbackToLastLayout(enWord: enWord, uaWord: uaWord)
+        return detectedLanguageIsUkrainian ? uaWord : enWord
     }
 
     private let languageRecognizer = NLLanguageRecognizer()
 
     private func detectLanguageNL(uaWord: String, enWord: String) -> String? {
-        return detectLanguageNLWithContext(uaWord: uaWord, enWord: enWord)
-    }
-
-    private func detectLanguageNLWithContext(uaWord: String, enWord: String) -> String? {
         languageRecognizer.reset()
         languageRecognizer.languageConstraints = [.ukrainian, .english]
 
-        let uaPhrase: String
-        let enPhrase: String
-
-        if lastCommittedWord.isEmpty {
-            uaPhrase = uaWord
-            enPhrase = enWord
-        } else {
-            uaPhrase = lastCommittedWord + " " + uaWord
-            enPhrase = lastCommittedWord + " " + enWord
-        }
+        let uaPhrase = lastCommittedWord.isEmpty ? uaWord : lastCommittedWord + " " + uaWord
+        let enPhrase = lastCommittedWord.isEmpty ? enWord : lastCommittedWord + " " + enWord
 
         languageRecognizer.processString(uaPhrase)
-        let uaConfidence = languageRecognizer.languageHypotheses(withMaximum: 2)[.ukrainian] ?? 0
+        let uaConf = languageRecognizer.languageHypotheses(withMaximum: 2)[.ukrainian] ?? 0
         languageRecognizer.reset()
 
         languageRecognizer.processString(enPhrase)
-        let enConfidence = languageRecognizer.languageHypotheses(withMaximum: 2)[.english] ?? 0
+        let enConf = languageRecognizer.languageHypotheses(withMaximum: 2)[.english] ?? 0
         languageRecognizer.reset()
 
-        DrukarLog.debug("NL: '\(uaPhrase)'=\(String(format: "%.2f", uaConfidence)) '\(enPhrase)'=\(String(format: "%.2f", enConfidence))")
-
-        let minConfidence = 0.3
-        let margin = 0.1
-        if uaConfidence > enConfidence + margin && uaConfidence >= minConfidence { return uaWord }
-        if enConfidence > uaConfidence + margin && enConfidence >= minConfidence { return enWord }
-
+        if uaConf > enConf + 0.1 && uaConf >= 0.3 { return uaWord }
+        if enConf > uaConf + 0.1 && enConf >= 0.3 { return enWord }
         return nil
     }
 
     private func safeCorrection(for word: String, language: String) -> String? {
         guard word.count >= 4 else { return nil }
         guard let corrected = dictionary.correction(for: word, language: language) else { return nil }
-        let wLower = word.lowercased()
-        let cLower = corrected.lowercased()
-        // Allow same first letter OR transposition of first two letters
+        let wLower = word.lowercased(), cLower = corrected.lowercased()
         let sameFirst = cLower.first == wLower.first
-        let transposedFirst = wLower.count >= 2 && cLower.count >= 2
-            && Array(cLower)[0] == Array(wLower)[1]
-            && Array(cLower)[1] == Array(wLower)[0]
-        guard sameFirst || transposedFirst else { return nil }
+        let transposed = wLower.count >= 2 && cLower.count >= 2
+            && Array(cLower)[0] == Array(wLower)[1] && Array(cLower)[1] == Array(wLower)[0]
+        guard sameFirst || transposed else { return nil }
         return corrected
-    }
-
-    private func fallbackToLastLayout(enWord: String, uaWord: String) -> String {
-        return detectedLanguageIsUkrainian ? uaWord : enWord
     }
 
     // MARK: - Layout Resolution
@@ -535,18 +616,14 @@ class DrukarInputController: IMKInputController {
         for layoutID in LayoutResolver.availableLayoutIDs() {
             if LanguageDetector.isEnglishLayout(layoutID) && enLayoutID == nil {
                 enLayoutID = layoutID
-                if let source = LayoutResolver.sourceForID(layoutID) {
-                    characterMapper.buildMap(for: source, sourceID: layoutID)
-                }
+                if let source = LayoutResolver.sourceForID(layoutID) { characterMapper.buildMap(for: source, sourceID: layoutID) }
             }
             if LanguageDetector.isUkrainianLayout(layoutID) && uaLayoutID == nil {
                 uaLayoutID = layoutID
-                if let source = LayoutResolver.sourceForID(layoutID) {
-                    characterMapper.buildMap(for: source, sourceID: layoutID)
-                }
+                if let source = LayoutResolver.sourceForID(layoutID) { characterMapper.buildMap(for: source, sourceID: layoutID) }
             }
         }
         mapsReady = enLayoutID != nil && uaLayoutID != nil
-        DrukarLog.info("Layouts resolved: en=\(enLayoutID ?? "nil") ua=\(uaLayoutID ?? "nil") ready=\(mapsReady)")
+        DrukarLog.info("Layouts: en=\(enLayoutID ?? "nil") ua=\(uaLayoutID ?? "nil") ready=\(mapsReady)")
     }
 }
