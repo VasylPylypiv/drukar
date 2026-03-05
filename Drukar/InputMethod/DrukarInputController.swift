@@ -302,7 +302,11 @@ class DrukarInputController: IMKInputController {
         let currentIsEN = (correctedWord != uaWord) || (!detectedLanguageIsUkrainian && correctedWord == enWord)
         let enInDict = dictionary.isKnownEnglishWord(enLetters)
         let uaInDict = dictionary.isKnownUkrainianWord(uaLetters)
-        let isAmbiguous = enInDict && uaInDict && enLetters.count == uaLetters.count
+        // Not ambiguous if frequency clearly resolves it
+        let enFreq = WordFrequency.score(of: enLetters, language: "en")
+        let uaFreq = WordFrequency.score(of: uaLetters, language: "uk")
+        let freqResolved = abs(enFreq - uaFreq) > 0.05
+        let isAmbiguous = enInDict && uaInDict && enLetters.count == uaLetters.count && !freqResolved
 
         // Check if current word resolves a PENDING ambiguous word
         if case .pending(let pw) = state {
@@ -545,6 +549,19 @@ class DrukarInputController: IMKInputController {
         if enInDict && uaInDict {
             if uaLetters.count > enLetters.count { return uaWord }
             if enLetters.count > uaLetters.count { return enWord }
+            // Both valid, same length — compare word frequencies
+            let enFreq = WordFrequency.score(of: enLetters, language: "en")
+            let uaFreq = WordFrequency.score(of: uaLetters, language: "uk")
+            if enFreq > 0 || uaFreq > 0 {
+                if enFreq > uaFreq + 0.05 {
+                    DrukarLog.debug("freq: '\(enWord)' wins (en=\(String(format: "%.2f", enFreq)) ua=\(String(format: "%.2f", uaFreq)))")
+                    return enWord
+                }
+                if uaFreq > enFreq + 0.05 {
+                    DrukarLog.debug("freq: '\(uaWord)' wins (ua=\(String(format: "%.2f", uaFreq)) en=\(String(format: "%.2f", enFreq)))")
+                    return uaWord
+                }
+            }
             return detectedLanguageIsUkrainian ? uaWord : enWord
         }
         if enInDict { return enWord }

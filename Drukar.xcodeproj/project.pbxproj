@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -18,6 +18,7 @@
 		A666FCD5262B7C2919BDBE78 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09BD17955E349449A652BD29 /* SettingsView.swift */; };
 		AAE1F1512A8AE8E10A8A8F0B /* drukar-menubar.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 74512043E545177E3C77962E /* drukar-menubar.tiff */; };
 		AFA925FBF65FADE147D24B24 /* LanguageDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A598A938EBB7171C1582F3 /* LanguageDetector.swift */; };
+		B5FB3E9831A9BBA109F64F5B /* WordFrequency.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8547436848BC694C41CF1DA /* WordFrequency.swift */; };
 		C16EC763E29A2EA9968F8A25 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FD5B770441A4780A1B3A6B6 /* AppDelegate.swift */; };
 		C1E4C0890960BB888CEC3B57 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F8C771E4D49303EEB5F695 /* main.swift */; };
 		CC9E774424687A83A7E3C9CD /* CharacterMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C5FDDB40D193FB92C0EAB8 /* CharacterMapper.swift */; };
@@ -41,6 +42,7 @@
 		7BE0B5669B13588F0FB3BF5E /* DrukarSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrukarSettings.swift; sourceTree = "<group>"; };
 		800113F4A294BE738448044D /* Drukar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Drukar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8D31169150A3DD22C0F0E70D /* LayoutResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutResolver.swift; sourceTree = "<group>"; };
+		B8547436848BC694C41CF1DA /* WordFrequency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordFrequency.swift; sourceTree = "<group>"; };
 		BF0E4D327D6E41F9069FEE4E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D01ECB0BDEC5484C3A6D98B2 /* DrukarInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrukarInputController.swift; sourceTree = "<group>"; };
 		D1F8C771E4D49303EEB5F695 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -86,6 +88,7 @@
 				2AFC8A0F095C8AA366299C7A /* ITDictionary.swift */,
 				22A598A938EBB7171C1582F3 /* LanguageDetector.swift */,
 				611DAF7742645848E2BA7726 /* WordDictionary.swift */,
+				B8547436848BC694C41CF1DA /* WordFrequency.swift */,
 			);
 			path = Detection;
 			sourceTree = "<group>";
@@ -157,7 +160,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 1630;
 				TargetAttributes = {
 					AD6FFFF08B64ABEA0DB925B6 = {
 						ProvisioningStyle = Automatic;
@@ -174,6 +177,7 @@
 			);
 			mainGroup = 1583535B3839833760577124;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -212,6 +216,7 @@
 				A666FCD5262B7C2919BDBE78 /* SettingsView.swift in Sources */,
 				7B2A3F8EE4CF7FA4D2920F04 /* SettingsWindowController.swift in Sources */,
 				963985C5BF338FD00C63D082 /* WordDictionary.swift in Sources */,
+				B5FB3E9831A9BBA109F64F5B /* WordFrequency.swift in Sources */,
 				C1E4C0890960BB888CEC3B57 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -253,11 +258,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -278,7 +281,6 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
@@ -292,7 +294,6 @@
 				CODE_SIGN_ENTITLEMENTS = Drukar/Resources/Drukar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Drukar/Resources/Info.plist;
@@ -314,7 +315,6 @@
 				CODE_SIGN_ENTITLEMENTS = Drukar/Resources/Drukar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Drukar/Resources/Info.plist;
@@ -363,11 +363,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -381,7 +379,6 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
