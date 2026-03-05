@@ -1,6 +1,7 @@
 import Cocoa
 import InputMethodKit
 import Carbon.HIToolbox
+import NaturalLanguage
 
 /// Main input controller — one instance per client (app window).
 /// IMK calls `handle(_:client:)` for each key event BEFORE it reaches the app.
@@ -265,6 +266,7 @@ class DrukarInputController: IMKInputController {
     }
 
     private var detectedLanguageIsUkrainian = true
+    private var lastCommittedWord = ""
 
     private func pickDisplayCharacter(enChar: Character?, uaChar: Character?) -> Character? {
         if detectedLanguageIsUkrainian {
@@ -298,6 +300,7 @@ class DrukarInputController: IMKInputController {
 
         let correctedWord = evaluateBestInterpretation(enWord: enWord, uaWord: uaWord)
         detectedLanguageIsUkrainian = (correctedWord == uaWord)
+        lastCommittedWord = correctedWord
         DrukarLog.debug("boundary: en='\(enWord)' ua='\(uaWord)' → '\(correctedWord)' (nextUA=\(detectedLanguageIsUkrainian))")
 
         let textToInsert = insertBoundary ? correctedWord + boundaryChar : correctedWord
@@ -417,14 +420,7 @@ class DrukarInputController: IMKInputController {
         if enInDict && uaInDict {
             if uaLetters.count > enLetters.count { return uaWord }
             if enLetters.count > uaLetters.count { return enWord }
-            // Same length, both valid — prefer the "real" word over abbreviation/noise
-            let uaHasCyrillic = uaLetters.contains { $0 >= "\u{0400}" && $0 <= "\u{04FF}" }
-            let enHasLatin = enLetters.contains { ($0 >= "a" && $0 <= "z") || ($0 >= "A" && $0 <= "Z") }
-            if uaHasCyrillic && enHasLatin {
-                // Both are real scripts — prefer current language context
-                return detectedLanguageIsUkrainian ? uaWord : enWord
-            }
-            return fallbackToLastLayout(enWord: enWord, uaWord: uaWord)
+            return detectedLanguageIsUkrainian ? uaWord : enWord
         }
         if enInDict { return enWord }
         if uaInDict { return uaWord }
@@ -466,23 +462,66 @@ class DrukarInputController: IMKInputController {
             }
         }
 
-        // Bigram analysis (fallback for words not in any dictionary)
-        let enScore = detector.commonBigramScore(word: enWord, forUkrainian: false)
-        let uaScore = detector.commonBigramScore(word: uaWord, forUkrainian: true)
-
-        DrukarLog.debug("bigrams: en=\(String(format: "%.2f", enScore)) ua=\(String(format: "%.2f", uaScore))")
-
-        let threshold = 0.30
-        if enScore >= 0.3 && enScore > uaScore + threshold { return enWord }
-        if uaScore >= 0.3 && uaScore > enScore + threshold { return uaWord }
+        // NL language detection (replaces bigrams — smarter, Apple ML model)
+        let nlWinner = detectLanguageNL(uaWord: uaWord, enWord: enWord)
+        if let winner = nlWinner {
+            DrukarLog.debug("NL detect: '\(winner)'")
+            return winner
+        }
 
         return fallbackToLastLayout(enWord: enWord, uaWord: uaWord)
+    }
+
+    private let languageRecognizer = NLLanguageRecognizer()
+
+    private func detectLanguageNL(uaWord: String, enWord: String) -> String? {
+        return detectLanguageNLWithContext(uaWord: uaWord, enWord: enWord)
+    }
+
+    private func detectLanguageNLWithContext(uaWord: String, enWord: String) -> String? {
+        languageRecognizer.reset()
+        languageRecognizer.languageConstraints = [.ukrainian, .english]
+
+        let uaPhrase: String
+        let enPhrase: String
+
+        if lastCommittedWord.isEmpty {
+            uaPhrase = uaWord
+            enPhrase = enWord
+        } else {
+            uaPhrase = lastCommittedWord + " " + uaWord
+            enPhrase = lastCommittedWord + " " + enWord
+        }
+
+        languageRecognizer.processString(uaPhrase)
+        let uaConfidence = languageRecognizer.languageHypotheses(withMaximum: 2)[.ukrainian] ?? 0
+        languageRecognizer.reset()
+
+        languageRecognizer.processString(enPhrase)
+        let enConfidence = languageRecognizer.languageHypotheses(withMaximum: 2)[.english] ?? 0
+        languageRecognizer.reset()
+
+        DrukarLog.debug("NL: '\(uaPhrase)'=\(String(format: "%.2f", uaConfidence)) '\(enPhrase)'=\(String(format: "%.2f", enConfidence))")
+
+        let minConfidence = 0.3
+        let margin = 0.1
+        if uaConfidence > enConfidence + margin && uaConfidence >= minConfidence { return uaWord }
+        if enConfidence > uaConfidence + margin && enConfidence >= minConfidence { return enWord }
+
+        return nil
     }
 
     private func safeCorrection(for word: String, language: String) -> String? {
         guard word.count >= 4 else { return nil }
         guard let corrected = dictionary.correction(for: word, language: language) else { return nil }
-        guard corrected.lowercased().first == word.lowercased().first else { return nil }
+        let wLower = word.lowercased()
+        let cLower = corrected.lowercased()
+        // Allow same first letter OR transposition of first two letters
+        let sameFirst = cLower.first == wLower.first
+        let transposedFirst = wLower.count >= 2 && cLower.count >= 2
+            && Array(cLower)[0] == Array(wLower)[1]
+            && Array(cLower)[1] == Array(wLower)[0]
+        guard sameFirst || transposedFirst else { return nil }
         return corrected
     }
 

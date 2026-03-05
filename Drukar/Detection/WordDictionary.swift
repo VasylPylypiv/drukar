@@ -36,15 +36,36 @@ final class WordDictionary {
             inSpellDocumentWithTag: 0
         )
 
-        guard let guesses, !guesses.isEmpty else { return nil }
+        guard let guesses, !guesses.isEmpty else {
+            // NSSpellChecker has no suggestions — try all adjacent transpositions
+            return correctionByTransposition(lowered, language: language)
+        }
+
+        let maxDistance = lowered.count >= 7 ? 2 : 1
 
         for guess in guesses.prefix(5) {
             let distance = editDistance(lowered, guess.lowercased())
-            if distance <= 1 {
+            if distance <= maxDistance {
                 return guess
             }
         }
 
+        // Guesses exist but none within distance — try transpositions
+        return correctionByTransposition(lowered, language: language)
+    }
+
+    private func correctionByTransposition(_ word: String, language: String) -> String? {
+        var chars = Array(word)
+        guard chars.count >= 3 else { return nil }
+
+        for i in 0..<(chars.count - 1) {
+            chars.swapAt(i, i + 1)
+            let candidate = String(chars)
+            if isKnownWord(candidate, language: language) {
+                return candidate
+            }
+            chars.swapAt(i, i + 1)
+        }
         return nil
     }
 
