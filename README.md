@@ -16,7 +16,7 @@ Drukar intercepts keystrokes *before* they reach your app, analyzes both possibl
 
 - **Auto-detection** — type in any layout, Drukar figures out the language
 - **Atomic replacement** — no backspace flicker, text appears correct from the start
-- **Autocorrect** — fixes typos like "привт" → "привіт", "tset" → "test" (Damerau-Levenshtein, distance 1)
+- **Autocorrect** — fixes typos like "привт" → "привіт", "tset" → "test", "expreince" → "experience" (Damerau-Levenshtein, distance 1-2)
 - **IT dictionary** — 150+ built-in Ukrainian IT terms (логи, деплой, кеш, юзер, фіча...)
 - **Custom dictionary** — add your own words via Settings
 - **Caps Lock = English mode** — LED on = forced English, LED off = auto-detect
@@ -50,8 +50,8 @@ Drukar is different:
    - **Dictionary lookup** via `NSSpellChecker` (100K+ words per language)
    - **IT slang dictionary** (150+ Ukrainian tech terms)
    - **Custom user dictionary** (added via Settings)
-   - **Autocorrect** (Damerau-Levenshtein distance 1, same first letter)
-   - **Bigram frequency analysis** as final fallback
+   - **Autocorrect** (Damerau-Levenshtein distance 1-2, NSSpellChecker suggestions)
+   - **NLLanguageRecognizer** (Apple ML model, replaces manual bigram tables)
    - **Single-letter word whitelist** (і, я, в, a, I)
 5. The correct interpretation is committed atomically
 6. Language context carries over: after a Ukrainian word, the next word displays in Cyrillic; after English — in Latin
@@ -140,8 +140,8 @@ Drukar is a clean-room rewrite using InputMethodKit — the proper macOS API for
 Issues and PRs are welcome. The main areas that need improvement:
 
 - [ ] Undo correction (backspace after space reverts to original)
+- [ ] Retrospective correction (re-evaluate previous 2-3 words together)
 - [ ] Support for more language pairs (RU/EN, PL/EN, etc.)
-- [ ] Improved heuristics for words valid in both languages
 - [ ] Apple Developer ID signing (eliminate "unidentified developer" warning)
 - [ ] Homebrew Cask distribution
 
