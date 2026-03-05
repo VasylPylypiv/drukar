@@ -16,14 +16,15 @@ Drukar intercepts keystrokes *before* they reach your app, analyzes both possibl
 
 - **Auto-detection** — type in any layout, Drukar figures out the language
 - **Atomic replacement** — no backspace flicker, text appears correct from the start
-- **Autocorrect** — fixes typos like "привт" → "привіт", "tset" → "test", "expreince" → "experience" (Damerau-Levenshtein, distance 1-2)
+- **5,000-word frequency dictionaries** — logarithmic scoring from Leipzig Corpus (News 2024, 1M sentences)
+- **Autocorrect** — fixes typos like "привт" → "привіт", "tset" → "test" (Damerau-Levenshtein, sliding window tolerance: distance 1 for 4–6 chars, distance 2 for 7+)
 - **IT dictionary** — 150+ built-in Ukrainian IT terms (логи, деплой, кеш, юзер, фіча...)
 - **Custom dictionary** — add your own words via Settings
 - **Caps Lock = English mode** — LED on = forced English, LED off = auto-detect
 - **Settings UI** — configure autocorrect, word length, custom dictionary, app exclusions
 - **Menu bar menu** — click "Д" icon to toggle modes, open settings
-- **Per-app exclusion** — auto-disabled in Terminal, iTerm2, Kitty, Warp; add your own
-- **Lightweight** — 0.02% CPU, 6 MB memory, 140 KB download
+- **Per-app exclusion** — auto-disabled in Terminal, iTerm2, Kitty, Warp, 1Password, Bitwarden, Alfred, Raycast; add your own
+- **Lightweight** — 0.02% CPU, 6 MB memory, ~350 KB download
 
 ## Why?
 
@@ -48,9 +49,10 @@ Drukar is different:
 3. Text appears as **underlined composing text** (like CJK input methods) while you type
 4. On word boundary (space, enter), Drukar evaluates both interpretations:
    - **Dictionary lookup** via `NSSpellChecker` (100K+ words per language)
+   - **Word frequency comparison** — 5,000 words per language, logarithmic scoring from Leipzig Corpus
    - **IT slang dictionary** (150+ Ukrainian tech terms)
    - **Custom user dictionary** (added via Settings)
-   - **Autocorrect** (Damerau-Levenshtein distance 1-2, NSSpellChecker suggestions)
+   - **Autocorrect** (Damerau-Levenshtein, sliding window: distance 1 for short words, distance 2 for 7+ chars)
    - **NLLanguageRecognizer** (Apple ML model, replaces manual bigram tables)
    - **Single-letter word whitelist** (і, я, в, a, I)
 5. The correct interpretation is committed atomically
@@ -89,6 +91,23 @@ open Drukar.xcodeproj
 
 In Xcode: set Team in Signing & Capabilities, then Cmd+R to build.
 
+To install after building:
+
+```bash
+kill -9 $(pgrep -x Drukar)
+cp -R "$HOME/Library/Developer/Xcode/DerivedData/Drukar-*/Build/Products/Debug/Drukar.app" "$HOME/Library/Input Methods/"
+```
+
+### Regenerating Frequency Dictionaries
+
+The frequency JSON files are included in the repo. To regenerate from fresh Leipzig Corpus data:
+
+```bash
+python3 scripts/generate_freq.py
+```
+
+This downloads the latest Ukrainian and English news corpora (1M sentences each) and produces `Drukar/Resources/ua_freq.json` and `Drukar/Resources/en_freq.json` with 5,000 words per language.
+
 ## Project Structure
 
 ```
@@ -104,15 +123,20 @@ Drukar/
 │   ├── DualBuffer.swift         # Dual EN/UA keystroke buffer
 │   ├── LanguageDetector.swift   # Bigram tables and scoring
 │   ├── WordDictionary.swift     # NSSpellChecker + autocorrect
+│   ├── WordFrequency.swift      # JSON-loaded word frequency scores (5K words/lang)
 │   ├── CharacterMapper.swift    # UCKeyTranslate keycode↔character mapping
 │   └── ITDictionary.swift       # Built-in IT slang (150+ words)
 ├── Settings/
 │   ├── DrukarSettings.swift     # UserDefaults persistence
 │   ├── SettingsView.swift       # SwiftUI settings window
 │   └── SettingsWindowController.swift
-└── Resources/
-    ├── Info.plist               # IMK configuration
-    └── Assets.xcassets/
+├── Resources/
+│   ├── Info.plist               # IMK configuration
+│   ├── ua_freq.json             # Ukrainian word frequencies (5K, Leipzig Corpus)
+│   ├── en_freq.json             # English word frequencies (5K, Leipzig Corpus)
+│   └── Assets.xcassets/
+└── scripts/
+    └── generate_freq.py         # Regenerate frequency JSONs from Leipzig data
 ```
 
 ## Performance
@@ -121,7 +145,22 @@ Drukar/
 - **Private Memory**: 6 MB
 - **Threads**: 4
 - **Hangs**: 0
-- **Download**: 140 KB
+- **Download**: ~350 KB
+
+## Changelog
+
+### v0.4
+
+- **Expanded frequency dictionaries**: 500 → 5,000 words per language, sourced from Leipzig Corpus (News 2024, 1M sentences)
+- **Logarithmic scoring**: `log10(totalWords / rank)` replaces linear `1 - rank/501` for better discrimination across frequency ranks
+- **JSON-loaded dictionaries**: frequency data loaded from bundled JSON files instead of hardcoded Swift arrays
+- **Expanded app blacklist**: added 1Password, Bitwarden, Alfred, Raycast to auto-excluded apps
+- **Sliding window autocorrect**: distance 1 for 4–6 character words, distance 2 for 7+ characters; relaxed first-letter rule for longer words
+- **Regeneration script**: `scripts/generate_freq.py` downloads and processes Leipzig corpus data
+
+### v0.3
+
+- Initial public release with NSSpellChecker detection, IT dictionary, autocorrect, NLLanguageRecognizer fallback
 
 ## Known Limitations
 

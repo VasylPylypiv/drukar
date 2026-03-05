@@ -176,7 +176,7 @@ struct SettingsView: View {
                             .disabled(newExcludedApp.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
 
-                    Text("Drukar автоматично вимкнений в Terminal, iTerm2, Kitty, Warp.")
+                    Text("Drukar автоматично вимкнений в Terminal, iTerm2, Kitty, Warp, 1Password, Bitwarden, Alfred, Raycast.")
                         .foregroundStyle(.secondary)
                         .font(.callout)
 

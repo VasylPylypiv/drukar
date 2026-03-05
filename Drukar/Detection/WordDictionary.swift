@@ -37,11 +37,10 @@ final class WordDictionary {
         )
 
         guard let guesses, !guesses.isEmpty else {
-            // NSSpellChecker has no suggestions — try all adjacent transpositions
             return correctionByTransposition(lowered, language: language)
         }
 
-        let maxDistance = lowered.count >= 7 ? 2 : 1
+        let maxDistance = maxEditDistance(for: lowered.count)
 
         for guess in guesses.prefix(5) {
             let distance = editDistance(lowered, guess.lowercased())
@@ -50,8 +49,13 @@ final class WordDictionary {
             }
         }
 
-        // Guesses exist but none within distance — try transpositions
         return correctionByTransposition(lowered, language: language)
+    }
+
+    /// Sliding window: 4-6 chars → distance 1, 7+ chars → distance 2
+    private func maxEditDistance(for length: Int) -> Int {
+        if length >= 7 { return 2 }
+        return 1
     }
 
     private func correctionByTransposition(_ word: String, language: String) -> String? {

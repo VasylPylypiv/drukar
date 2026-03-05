@@ -52,8 +52,15 @@ class DrukarInputController: IMKInputController {
     }
 
     private static let excludedBundleIDs: Set<String> = [
+        // Terminal emulators
         "com.apple.Terminal", "com.googlecode.iterm2", "net.kovidgoyal.kitty",
         "com.github.wez.wezterm", "co.zeit.hyper", "dev.warp.Warp-Stable",
+        // Password managers
+        "com.1password.1password", "com.agilebits.onepassword7",
+        "com.bitwarden.desktop",
+        // Launchers
+        "com.runningwithcrayons.Alfred", "com.runningwithcrayons.Alfred-Preferences",
+        "com.raycast.macos",
     ]
 
     private var isExcludedApp = false
@@ -138,7 +145,7 @@ class DrukarInputController: IMKInputController {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
-        let aboutItem = NSMenuItem(title: "Про Друкар v0.3", action: #selector(showAbout(_:)), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "Про Друкар v0.4", action: #selector(showAbout(_:)), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 
@@ -154,8 +161,8 @@ class DrukarInputController: IMKInputController {
     @objc private func showAbout(_ sender: Any?) {
         DispatchQueue.main.async {
             let alert = NSAlert()
-            alert.messageText = "Друкар (Drukar) v0.3"
-            alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nCaps Lock = English mode\n\ngithub.com/VasylPylypiv/drukar"
+            alert.messageText = "Друкар (Drukar) v0.4"
+            alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nCaps Lock = English mode\n5000-word frequency dictionaries (Leipzig Corpus)\n\ngithub.com/VasylPylypiv/drukar"
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
             alert.runModal()
@@ -305,7 +312,7 @@ class DrukarInputController: IMKInputController {
         // Not ambiguous if frequency clearly resolves it
         let enFreq = WordFrequency.score(of: enLetters, language: "en")
         let uaFreq = WordFrequency.score(of: uaLetters, language: "uk")
-        let freqResolved = abs(enFreq - uaFreq) > 0.05
+        let freqResolved = abs(enFreq - uaFreq) > 0.3
         let isAmbiguous = enInDict && uaInDict && enLetters.count == uaLetters.count && !freqResolved
 
         // Check if current word resolves a PENDING ambiguous word
@@ -553,11 +560,11 @@ class DrukarInputController: IMKInputController {
             let enFreq = WordFrequency.score(of: enLetters, language: "en")
             let uaFreq = WordFrequency.score(of: uaLetters, language: "uk")
             if enFreq > 0 || uaFreq > 0 {
-                if enFreq > uaFreq + 0.05 {
+                if enFreq > uaFreq + 0.3 {
                     DrukarLog.debug("freq: '\(enWord)' wins (en=\(String(format: "%.2f", enFreq)) ua=\(String(format: "%.2f", uaFreq)))")
                     return enWord
                 }
-                if uaFreq > enFreq + 0.05 {
+                if uaFreq > enFreq + 0.3 {
                     DrukarLog.debug("freq: '\(uaWord)' wins (ua=\(String(format: "%.2f", uaFreq)) en=\(String(format: "%.2f", enFreq)))")
                     return uaWord
                 }
@@ -621,9 +628,12 @@ class DrukarInputController: IMKInputController {
         guard let corrected = dictionary.correction(for: word, language: language) else { return nil }
         let wLower = word.lowercased(), cLower = corrected.lowercased()
         let sameFirst = cLower.first == wLower.first
-        let transposed = wLower.count >= 2 && cLower.count >= 2
-            && Array(cLower)[0] == Array(wLower)[1] && Array(cLower)[1] == Array(wLower)[0]
-        guard sameFirst || transposed else { return nil }
+        let wArr = Array(wLower), cArr = Array(cLower)
+        let transposedFirst = wArr.count >= 2 && cArr.count >= 2
+            && cArr[0] == wArr[1] && cArr[1] == wArr[0]
+        // For longer words (7+), allow any first letter if total edit distance is acceptable
+        let relaxedForLong = word.count >= 7
+        guard sameFirst || transposedFirst || relaxedForLong else { return nil }
         return corrected
     }
 
