@@ -20,7 +20,7 @@ import urllib.request
 UA_CORPUS_URL = "https://downloads.wortschatz-leipzig.de/corpora/ukr_news_2024_1M.tar.gz"
 EN_CORPUS_URL = "https://downloads.wortschatz-leipzig.de/corpora/eng_news_2024_1M.tar.gz"
 
-TOP_N = 5000
+TOP_N = 50000
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "Drukar", "Resources")
 
 

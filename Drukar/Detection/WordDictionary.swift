@@ -62,6 +62,7 @@ final class WordDictionary {
         var chars = Array(word)
         guard chars.count >= 3 else { return nil }
 
+        // Single adjacent transposition
         for i in 0..<(chars.count - 1) {
             chars.swapAt(i, i + 1)
             let candidate = String(chars)
@@ -70,6 +71,22 @@ final class WordDictionary {
             }
             chars.swapAt(i, i + 1)
         }
+
+        // Double adjacent transposition (for 7+ char words)
+        guard chars.count >= 5 else { return nil }
+        for i in 0..<(chars.count - 1) {
+            chars.swapAt(i, i + 1)
+            for j in 0..<(chars.count - 1) where j != i {
+                chars.swapAt(j, j + 1)
+                let candidate = String(chars)
+                if isKnownWord(candidate, language: language) {
+                    return candidate
+                }
+                chars.swapAt(j, j + 1)
+            }
+            chars.swapAt(i, i + 1)
+        }
+
         return nil
     }
 
