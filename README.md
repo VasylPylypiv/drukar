@@ -16,15 +16,15 @@ Drukar intercepts keystrokes *before* they reach your app, analyzes both possibl
 
 - **Auto-detection** — type in any layout, Drukar figures out the language
 - **Atomic replacement** — no backspace flicker, text appears correct from the start
-- **5,000-word frequency dictionaries** — logarithmic scoring from Leipzig Corpus (News 2024, 1M sentences)
-- **Autocorrect** — fixes typos like "привт" → "привіт", "tset" → "test" (Damerau-Levenshtein, sliding window tolerance: distance 1 for 4–6 chars, distance 2 for 7+)
+- **50,000-word frequency dictionaries** — logarithmic scoring from Leipzig Corpus (News 2024, 1M sentences)
+- **Autocorrect** — fixes typos like "привт" → "привіт", "настикаю" → "натискаю" (Damerau-Levenshtein, sliding window tolerance: distance 1 for 4–6 chars, distance 2 for 7+; double adjacent transposition)
 - **IT dictionary** — 150+ built-in Ukrainian IT terms (логи, деплой, кеш, юзер, фіча...)
 - **Custom dictionary** — add your own words via Settings
 - **Caps Lock = English mode** — LED on = forced English, LED off = auto-detect
 - **Settings UI** — configure autocorrect, word length, custom dictionary, app exclusions
 - **Menu bar menu** — click "Д" icon to toggle modes, open settings
 - **Per-app exclusion** — auto-disabled in Terminal, iTerm2, Kitty, Warp, 1Password, Bitwarden, Alfred, Raycast; add your own
-- **Lightweight** — 0.02% CPU, 6 MB memory, ~350 KB download
+- **Lightweight** — 0.02% CPU, 8 MB memory, ~2.5 MB download
 
 ## Why?
 
@@ -106,7 +106,7 @@ The frequency JSON files are included in the repo. To regenerate from fresh Leip
 python3 scripts/generate_freq.py
 ```
 
-This downloads the latest Ukrainian and English news corpora (1M sentences each) and produces `Drukar/Resources/ua_freq.json` and `Drukar/Resources/en_freq.json` with 5,000 words per language.
+This downloads the latest Ukrainian and English news corpora (1M sentences each) and produces `Drukar/Resources/ua_freq.json` and `Drukar/Resources/en_freq.json` with 50,000 words per language.
 
 ## Project Structure
 
@@ -123,7 +123,7 @@ Drukar/
 │   ├── DualBuffer.swift         # Dual EN/UA keystroke buffer
 │   ├── LanguageDetector.swift   # Bigram tables and scoring
 │   ├── WordDictionary.swift     # NSSpellChecker + autocorrect
-│   ├── WordFrequency.swift      # JSON-loaded word frequency scores (5K words/lang)
+│   ├── WordFrequency.swift      # JSON-loaded word frequency scores (50K words/lang)
 │   ├── CharacterMapper.swift    # UCKeyTranslate keycode↔character mapping
 │   └── ITDictionary.swift       # Built-in IT slang (150+ words)
 ├── Settings/
@@ -132,8 +132,8 @@ Drukar/
 │   └── SettingsWindowController.swift
 ├── Resources/
 │   ├── Info.plist               # IMK configuration
-│   ├── ua_freq.json             # Ukrainian word frequencies (5K, Leipzig Corpus)
-│   ├── en_freq.json             # English word frequencies (5K, Leipzig Corpus)
+│   ├── ua_freq.json             # Ukrainian word frequencies (50K, Leipzig Corpus)
+│   ├── en_freq.json             # English word frequencies (50K, Leipzig Corpus)
 │   └── Assets.xcassets/
 └── scripts/
     └── generate_freq.py         # Regenerate frequency JSONs from Leipzig data
@@ -142,18 +142,19 @@ Drukar/
 ## Performance
 
 - **CPU**: 0.02% idle, <5% during typing
-- **Private Memory**: 6 MB
+- **Private Memory**: 8 MB
 - **Threads**: 4
 - **Hangs**: 0
-- **Download**: ~350 KB
+- **Download**: ~2.5 MB
 
 ## Changelog
 
 ### v0.4
 
-- **Expanded frequency dictionaries**: 500 → 5,000 words per language, sourced from Leipzig Corpus (News 2024, 1M sentences)
+- **Expanded frequency dictionaries**: 500 → 50,000 word forms per language, sourced from Leipzig Corpus (News 2024, 1M sentences)
 - **Logarithmic scoring**: `log10(totalWords / rank)` replaces linear `1 - rank/501` for better discrimination across frequency ranks
-- **JSON-loaded dictionaries**: frequency data loaded from bundled JSON files instead of hardcoded Swift arrays
+- **JSON-loaded dictionaries**: frequency data loaded from bundled JSON files (~1MB UA + ~850KB EN) instead of hardcoded Swift arrays
+- **Double transposition autocorrect**: brute-force tries two adjacent swaps for 5+ char words, fixing cases like "настикаю" → "натискаю" where NSSpellChecker returns no suggestions
 - **Expanded app blacklist**: added 1Password, Bitwarden, Alfred, Raycast to auto-excluded apps
 - **Sliding window autocorrect**: distance 1 for 4–6 character words, distance 2 for 7+ characters; relaxed first-letter rule for longer words
 - **Regeneration script**: `scripts/generate_freq.py` downloads and processes Leipzig corpus data
