@@ -145,7 +145,7 @@ class DrukarInputController: IMKInputController {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
-        let aboutItem = NSMenuItem(title: "Про Друкар v0.4", action: #selector(showAbout(_:)), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "Про Друкар v0.5", action: #selector(showAbout(_:)), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 
@@ -161,8 +161,8 @@ class DrukarInputController: IMKInputController {
     @objc private func showAbout(_ sender: Any?) {
         DispatchQueue.main.async {
             let alert = NSAlert()
-            alert.messageText = "Друкар (Drukar) v0.4"
-            alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nCaps Lock = English mode\n5000-word frequency dictionaries (Leipzig Corpus)\n\ngithub.com/VasylPylypiv/drukar"
+            alert.messageText = "Друкар (Drukar) v0.5"
+            alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nSymSpell autocorrect + 50K word frequency dictionaries\nCaps Lock = English mode\n\ngithub.com/VasylPylypiv/drukar"
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
             alert.runModal()
@@ -586,12 +586,17 @@ class DrukarInputController: IMKInputController {
         }
 
         if DrukarSettings.shared.autocorrectEnabled {
-            let uaCorrection = safeCorrection(for: uaLetters, language: "uk")
-            let enCorrection = safeCorrection(for: enLetters, language: "en")
-            if let uaFixed = uaCorrection, enCorrection == nil { return uaFixed }
-            if let enFixed = enCorrection, uaCorrection == nil { return enFixed }
-            if let uaFixed = uaCorrection, let enFixed = enCorrection {
-                return detectedLanguageIsUkrainian ? uaFixed : enFixed
+            let probableLang = detectedLanguageIsUkrainian ? "uk" : "en"
+            let primaryWord = detectedLanguageIsUkrainian ? uaLetters : enLetters
+            if let fixed = safeCorrection(for: primaryWord, language: probableLang) {
+                DrukarLog.debug("symspell: '\(primaryWord)' → '\(fixed)' (\(probableLang))")
+                return fixed
+            }
+            let secondaryLang = detectedLanguageIsUkrainian ? "en" : "uk"
+            let secondaryWord = detectedLanguageIsUkrainian ? enLetters : uaLetters
+            if let fixed = safeCorrection(for: secondaryWord, language: secondaryLang) {
+                DrukarLog.debug("symspell fallback: '\(secondaryWord)' → '\(fixed)' (\(secondaryLang))")
+                return fixed
             }
         }
 

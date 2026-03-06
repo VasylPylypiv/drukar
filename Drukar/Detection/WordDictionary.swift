@@ -3,6 +3,16 @@ import AppKit
 final class WordDictionary {
     private let checker = NSSpellChecker.shared
 
+    private let uaSymSpell: SymSpell
+    private let enSymSpell: SymSpell
+
+    init() {
+        uaSymSpell = SymSpell(dictionary: WordFrequency.ukrainianScores)
+        enSymSpell = SymSpell(dictionary: WordFrequency.englishScores)
+    }
+
+    // MARK: - isKnown: SymSpell(d=0) || NSSpellChecker
+
     func isKnownUkrainianWord(_ word: String) -> Bool {
         isKnownWord(word, language: "uk")
     }
@@ -14,6 +24,10 @@ final class WordDictionary {
     func isKnownWord(_ word: String, language: String) -> Bool {
         let lowered = word.lowercased()
         guard lowered.count >= 2 else { return false }
+
+        let symspell = language == "uk" ? uaSymSpell : enSymSpell
+        if symspell.isKnown(lowered) { return true }
+
         let range = checker.checkSpelling(
             of: lowered, startingAt: 0,
             language: language, wrap: false,
@@ -22,47 +36,37 @@ final class WordDictionary {
         return range.location == NSNotFound
     }
 
-    /// Returns the best correction for a misspelled word, or nil if no good correction exists.
+    // MARK: - Autocorrect: SymSpell fuzzy lookup + double transposition fallback
+
     func correction(for word: String, language: String) -> String? {
         let lowered = word.lowercased()
         guard lowered.count >= 2 else { return nil }
-
         guard !isKnownWord(lowered, language: language) else { return nil }
 
-        let guesses = checker.guesses(
-            forWordRange: NSRange(location: 0, length: lowered.utf16.count),
-            in: lowered,
-            language: language,
-            inSpellDocumentWithTag: 0
-        )
+        let symspell = language == "uk" ? uaSymSpell : enSymSpell
+        let suggestions = symspell.lookup(lowered)
 
-        guard let guesses, !guesses.isEmpty else {
-            return correctionByTransposition(lowered, language: language)
+        if let best = suggestions.first, best.distance > 0 {
+            return best.word
         }
 
-        let maxDistance = maxEditDistance(for: lowered.count)
-
-        for guess in guesses.prefix(5) {
-            let distance = editDistance(lowered, guess.lowercased())
-            if distance <= maxDistance {
-                return guess
+        // SymSpell d=1 found nothing — try double transposition for longer words
+        if lowered.count >= 5 {
+            if let transposed = correctionByDoubleTransposition(lowered, language: language) {
+                return transposed
             }
         }
 
-        return correctionByTransposition(lowered, language: language)
+        // Last resort: NSSpellChecker guesses (covers words outside our 50K dictionary)
+        return correctionBySpellChecker(lowered, language: language)
     }
 
-    /// Sliding window: 4-6 chars → distance 1, 7+ chars → distance 2
-    private func maxEditDistance(for length: Int) -> Int {
-        if length >= 7 { return 2 }
-        return 1
-    }
+    // MARK: - Double Adjacent Transposition
 
-    private func correctionByTransposition(_ word: String, language: String) -> String? {
+    private func correctionByDoubleTransposition(_ word: String, language: String) -> String? {
         var chars = Array(word)
         guard chars.count >= 3 else { return nil }
 
-        // Single adjacent transposition
         for i in 0..<(chars.count - 1) {
             chars.swapAt(i, i + 1)
             let candidate = String(chars)
@@ -72,7 +76,6 @@ final class WordDictionary {
             chars.swapAt(i, i + 1)
         }
 
-        // Double adjacent transposition (for 7+ char words)
         guard chars.count >= 5 else { return nil }
         for i in 0..<(chars.count - 1) {
             chars.swapAt(i, i + 1)
@@ -90,31 +93,27 @@ final class WordDictionary {
         return nil
     }
 
-    /// Damerau-Levenshtein distance: counts transpositions as single edit
-    private func editDistance(_ a: String, _ b: String) -> Int {
-        let a = Array(a)
-        let b = Array(b)
-        let m = a.count, n = b.count
+    // MARK: - NSSpellChecker Fallback
 
-        if m == 0 { return n }
-        if n == 0 { return m }
+    private func correctionBySpellChecker(_ word: String, language: String) -> String? {
+        let guesses = checker.guesses(
+            forWordRange: NSRange(location: 0, length: word.utf16.count),
+            in: word,
+            language: language,
+            inSpellDocumentWithTag: 0
+        )
 
-        var prev2 = [Int](repeating: 0, count: n + 1)
-        var prev = Array(0...n)
-        var curr = [Int](repeating: 0, count: n + 1)
+        guard let guesses, !guesses.isEmpty else { return nil }
 
-        for i in 1...m {
-            curr[0] = i
-            for j in 1...n {
-                let cost = a[i - 1] == b[j - 1] ? 0 : 1
-                curr[j] = min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
-                if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
-                    curr[j] = min(curr[j], prev2[j - 2] + cost)
-                }
+        let maxDistance = word.count >= 7 ? 2 : 1
+
+        for guess in guesses.prefix(5) {
+            let distance = SymSpell.damerauLevenshtein(word, guess.lowercased())
+            if distance <= maxDistance {
+                return guess
             }
-            prev2 = prev
-            prev = curr
         }
-        return prev[n]
+
+        return nil
     }
 }

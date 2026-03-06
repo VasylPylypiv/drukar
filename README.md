@@ -52,7 +52,7 @@ Drukar is different:
    - **Word frequency comparison** — 5,000 words per language, logarithmic scoring from Leipzig Corpus
    - **IT slang dictionary** (150+ Ukrainian tech terms)
    - **Custom user dictionary** (added via Settings)
-   - **Autocorrect** (Damerau-Levenshtein, sliding window: distance 1 for short words, distance 2 for 7+ chars)
+   - **Autocorrect** (SymSpell fuzzy lookup d=1, double transposition fallback, NSSpellChecker last resort)
    - **NLLanguageRecognizer** (Apple ML model, replaces manual bigram tables)
    - **Single-letter word whitelist** (і, я, в, a, I)
 5. The correct interpretation is committed atomically
@@ -122,8 +122,9 @@ Drukar/
 ├── Detection/
 │   ├── DualBuffer.swift         # Dual EN/UA keystroke buffer
 │   ├── LanguageDetector.swift   # Bigram tables and scoring
-│   ├── WordDictionary.swift     # NSSpellChecker + autocorrect
+│   ├── WordDictionary.swift     # NSSpellChecker + SymSpell autocorrect
 │   ├── WordFrequency.swift      # JSON-loaded word frequency scores (50K words/lang)
+│   ├── SymSpell.swift           # Symmetric Delete spelling correction (fuzzy lookup)
 │   ├── CharacterMapper.swift    # UCKeyTranslate keycode↔character mapping
 │   └── ITDictionary.swift       # Built-in IT slang (150+ words)
 ├── Settings/
@@ -148,6 +149,13 @@ Drukar/
 - **Download**: ~2.5 MB
 
 ## Changelog
+
+### v0.5
+
+- **SymSpell autocorrect**: custom Symmetric Delete spelling correction replaces NSSpellChecker.guesses() as primary autocorrect engine — O(1) candidate lookup from 50K-word index
+- **Hybrid isKnown**: SymSpell exact match (d=0) checked first, NSSpellChecker as fallback for words outside the 50K dictionary
+- **Language-aware fuzzy search**: autocorrect runs for the probable language first (based on context), then falls back to the other — reduces cross-language false positives
+- **NSSpellChecker demoted**: system spell checker now only used for isKnown validation and as last-resort guess source
 
 ### v0.4
 
