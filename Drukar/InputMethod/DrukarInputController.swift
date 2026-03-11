@@ -550,10 +550,31 @@ class DrukarInputController: IMKInputController {
 
         let enInDict = dictionary.isKnownEnglishWord(enLetters)
         let uaInDict = dictionary.isKnownUkrainianWord(uaLetters)
+        let enInFreq = WordFrequency.isKnown(enLetters, language: "en")
+        let uaInFreq = WordFrequency.isKnown(uaLetters, language: "uk")
 
-        DrukarLog.debug("eval: en='\(enWord)'(\(enInDict)) ua='\(uaWord)'(\(uaInDict))")
+        DrukarLog.debug("eval: en='\(enWord)'(\(enInDict)/freq:\(enInFreq)) ua='\(uaWord)'(\(uaInDict)/freq:\(uaInFreq))")
 
         if enInDict && uaInDict {
+            // If only one side is in our own frequency dictionary, trust it over NSSpellChecker
+            if uaInFreq && !enInFreq { return uaWord }
+            if enInFreq && !uaInFreq { return enWord }
+
+            // Neither in freq dict — check SymSpell high-confidence (guards against NSSpellChecker false positives)
+            if !uaInFreq && !enInFreq {
+                let uaHighConf = dictionary.isHighConfidence(uaLetters, language: "uk")
+                let enHighConf = dictionary.isHighConfidence(enLetters, language: "en")
+                if uaHighConf && !enHighConf { return uaWord }
+                if enHighConf && !uaHighConf { return enWord }
+                // Both only known via NSSpellChecker — use NLLanguageRecognizer to break the tie
+                if !uaHighConf && !enHighConf {
+                    if let nlWinner = detectLanguageNL(uaWord: uaWord, enWord: enWord) {
+                        DrukarLog.debug("NL early tiebreak: '\(nlWinner)' (both NSSpellChecker-only)")
+                        return nlWinner
+                    }
+                }
+            }
+
             if uaLetters.count > enLetters.count { return uaWord }
             if enLetters.count > uaLetters.count { return enWord }
             // Both valid, same length — compare word frequencies

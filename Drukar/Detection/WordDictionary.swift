@@ -13,6 +13,13 @@ final class WordDictionary {
 
     // MARK: - isKnown: SymSpell(d=0) || NSSpellChecker
 
+    /// High-confidence: word is in our own 50K dictionary (not just NSSpellChecker).
+    func isHighConfidence(_ word: String, language: String) -> Bool {
+        let lowered = word.lowercased()
+        let symspell = language == "uk" ? uaSymSpell : enSymSpell
+        return symspell.isKnown(lowered)
+    }
+
     func isKnownUkrainianWord(_ word: String) -> Bool {
         isKnownWord(word, language: "uk")
     }
