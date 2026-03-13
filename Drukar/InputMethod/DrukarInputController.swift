@@ -145,7 +145,7 @@ class DrukarInputController: IMKInputController {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
-        let aboutItem = NSMenuItem(title: "Про Друкар v0.5", action: #selector(showAbout(_:)), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "Про Друкар v0.6", action: #selector(showAbout(_:)), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 
@@ -161,8 +161,8 @@ class DrukarInputController: IMKInputController {
     @objc private func showAbout(_ sender: Any?) {
         DispatchQueue.main.async {
             let alert = NSAlert()
-            alert.messageText = "Друкар (Drukar) v0.5"
-            alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nSymSpell autocorrect + 50K word frequency dictionaries\nCaps Lock = English mode\n\ngithub.com/VasylPylypiv/drukar"
+            alert.messageText = "Друкар (Drukar) v0.6"
+            alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nВЕСУМ: 3.7M словоформ UA + SCOWL: 134K EN\nSymSpell autocorrect, mmap dictionary\n\ngithub.com/VasylPylypiv/drukar"
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
             alert.runModal()

@@ -39,3 +39,5 @@ targets:
       - path: Drukar/Resources/drukar-menubar.tiff
       - path: Drukar/Resources/ua_freq.json
       - path: Drukar/Resources/en_freq.json
+      - path: Drukar/Resources/words_uk.txt.gz
+      - path: Drukar/Resources/words_en.txt.gz

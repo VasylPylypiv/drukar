@@ -8,8 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		0BFE7664D8EEEA71C00B90A7 /* LayoutResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D31169150A3DD22C0F0E70D /* LayoutResolver.swift */; };
+		0F5D0E76D390C0D74C4A7435 /* words_en.txt.gz in Resources */ = {isa = PBXBuildFile; fileRef = 718FD86EDC3013E3183F622A /* words_en.txt.gz */; };
 		4082EFC1AED88E52566D180E /* DrukarSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BE0B5669B13588F0FB3BF5E /* DrukarSettings.swift */; };
 		4B9D4E5FFFC211DBA0F96820 /* DrukarInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01ECB0BDEC5484C3A6D98B2 /* DrukarInputController.swift */; };
+		55CBC71BDA0CB6CE254A2449 /* words_uk.txt.gz in Resources */ = {isa = PBXBuildFile; fileRef = 37552569646EA4546DAFE3E4 /* words_uk.txt.gz */; };
 		72E492EC8C80A8F51EBA6683 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F93B5D5095F396A34E761A99 /* Assets.xcassets */; };
 		782649E179143E3B04CBB5ED /* ua_freq.json in Resources */ = {isa = PBXBuildFile; fileRef = B5AD669AECA714FFCEA8E0D4 /* ua_freq.json */; };
 		7B2A3F8EE4CF7FA4D2920F04 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 374D01D9A1C8956D9A35AF36 /* SettingsWindowController.swift */; };
@@ -22,6 +24,7 @@
 		AAE1F1512A8AE8E10A8A8F0B /* drukar-menubar.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 74512043E545177E3C77962E /* drukar-menubar.tiff */; };
 		AFA925FBF65FADE147D24B24 /* LanguageDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A598A938EBB7171C1582F3 /* LanguageDetector.swift */; };
 		B5FB3E9831A9BBA109F64F5B /* WordFrequency.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8547436848BC694C41CF1DA /* WordFrequency.swift */; };
+		BAEC3E7FF1BCE603387EA1F4 /* MappedDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE4CC2E08B12CBB44B5CFBA0 /* MappedDictionary.swift */; };
 		C16EC763E29A2EA9968F8A25 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FD5B770441A4780A1B3A6B6 /* AppDelegate.swift */; };
 		C1E4C0890960BB888CEC3B57 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F8C771E4D49303EEB5F695 /* main.swift */; };
 		CC9E774424687A83A7E3C9CD /* CharacterMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C5FDDB40D193FB92C0EAB8 /* CharacterMapper.swift */; };
@@ -38,9 +41,11 @@
 		2DF761C2C620FCEEA23E319F /* DrukarLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrukarLog.swift; sourceTree = "<group>"; };
 		36C5FDDB40D193FB92C0EAB8 /* CharacterMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterMapper.swift; sourceTree = "<group>"; };
 		374D01D9A1C8956D9A35AF36 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		37552569646EA4546DAFE3E4 /* words_uk.txt.gz */ = {isa = PBXFileReference; lastKnownFileType = archive.gzip; path = words_uk.txt.gz; sourceTree = "<group>"; };
 		3FD5B770441A4780A1B3A6B6 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		445B44C17B082AB31E6711C8 /* drukar-icon.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = "drukar-icon.tiff"; sourceTree = "<group>"; };
 		611DAF7742645848E2BA7726 /* WordDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordDictionary.swift; sourceTree = "<group>"; };
+		718FD86EDC3013E3183F622A /* words_en.txt.gz */ = {isa = PBXFileReference; lastKnownFileType = archive.gzip; path = words_en.txt.gz; sourceTree = "<group>"; };
 		74512043E545177E3C77962E /* drukar-menubar.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = "drukar-menubar.tiff"; sourceTree = "<group>"; };
 		7BE0B5669B13588F0FB3BF5E /* DrukarSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrukarSettings.swift; sourceTree = "<group>"; };
 		800113F4A294BE738448044D /* Drukar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Drukar.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -52,6 +57,7 @@
 		BF0E4D327D6E41F9069FEE4E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D01ECB0BDEC5484C3A6D98B2 /* DrukarInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrukarInputController.swift; sourceTree = "<group>"; };
 		D1F8C771E4D49303EEB5F695 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		EE4CC2E08B12CBB44B5CFBA0 /* MappedDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappedDictionary.swift; sourceTree = "<group>"; };
 		F93B5D5095F396A34E761A99 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -93,6 +99,7 @@
 				06D2223EF23F22994178C403 /* DualBuffer.swift */,
 				2AFC8A0F095C8AA366299C7A /* ITDictionary.swift */,
 				22A598A938EBB7171C1582F3 /* LanguageDetector.swift */,
+				EE4CC2E08B12CBB44B5CFBA0 /* MappedDictionary.swift */,
 				93C9F399069D75085E7272D1 /* SymSpell.swift */,
 				611DAF7742645848E2BA7726 /* WordDictionary.swift */,
 				B8547436848BC694C41CF1DA /* WordFrequency.swift */,
@@ -137,6 +144,8 @@
 				A51DFBE577656978DD6F6CDF /* en_freq.json */,
 				BF0E4D327D6E41F9069FEE4E /* Info.plist */,
 				B5AD669AECA714FFCEA8E0D4 /* ua_freq.json */,
+				718FD86EDC3013E3183F622A /* words_en.txt.gz */,
+				37552569646EA4546DAFE3E4 /* words_uk.txt.gz */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -205,6 +214,8 @@
 				AAE1F1512A8AE8E10A8A8F0B /* drukar-menubar.tiff in Resources */,
 				901DC29258DBB5AEA082D962 /* en_freq.json in Resources */,
 				782649E179143E3B04CBB5ED /* ua_freq.json in Resources */,
+				0F5D0E76D390C0D74C4A7435 /* words_en.txt.gz in Resources */,
+				55CBC71BDA0CB6CE254A2449 /* words_uk.txt.gz in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -224,6 +235,7 @@
 				89FA0C71D50979FFCE8504E8 /* ITDictionary.swift in Sources */,
 				AFA925FBF65FADE147D24B24 /* LanguageDetector.swift in Sources */,
 				0BFE7664D8EEEA71C00B90A7 /* LayoutResolver.swift in Sources */,
+				BAEC3E7FF1BCE603387EA1F4 /* MappedDictionary.swift in Sources */,
 				A666FCD5262B7C2919BDBE78 /* SettingsView.swift in Sources */,
 				7B2A3F8EE4CF7FA4D2920F04 /* SettingsWindowController.swift in Sources */,
 				9D3255C885A4AD7B5BD84B7E /* SymSpell.swift in Sources */,
