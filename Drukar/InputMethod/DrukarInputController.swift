@@ -7,7 +7,7 @@ class DrukarInputController: IMKInputController {
     private let buffer = DualBuffer()
     private let detector = LanguageDetector()
     private let characterMapper = CharacterMapper()
-    private let dictionary = WordDictionary()
+    private let dictionary = WordDictionary.shared
 
     private var enLayoutID: String?
     private var uaLayoutID: String?

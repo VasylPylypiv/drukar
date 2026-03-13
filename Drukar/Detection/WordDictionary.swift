@@ -1,12 +1,14 @@
 import AppKit
 
-final class WordDictionary {
+final class WordDictionary: @unchecked Sendable {
+    static let shared = WordDictionary()
+
     private let uaSymSpell: SymSpell
     private let enSymSpell: SymSpell
     private let uaMapped: MappedDictionary?
     private let enMapped: MappedDictionary?
 
-    init() {
+    private init() {
         uaSymSpell = SymSpell(dictionary: WordFrequency.ukrainianScores)
         enSymSpell = SymSpell(dictionary: WordFrequency.englishScores)
         uaMapped = MappedDictionary.load(resource: "words_uk")
@@ -15,7 +17,6 @@ final class WordDictionary {
 
     // MARK: - isKnown: MappedDictionary (VESUM/SCOWL) → SymSpell
 
-    /// High-confidence: word is in our own dictionaries (VESUM/SCOWL/SymSpell).
     func isHighConfidence(_ word: String, language: String) -> Bool {
         let lowered = word.lowercased()
         let mapped = language == "uk" ? uaMapped : enMapped
