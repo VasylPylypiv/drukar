@@ -18,6 +18,7 @@ targets:
       - path: Drukar
         excludes:
           - "Resources/Assets.xcassets/AppIcon.appiconset"
+          - "Resources/*.gz"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.vasylpylypiv.inputmethod.Drukar
@@ -39,5 +40,5 @@ targets:
       - path: Drukar/Resources/drukar-menubar.tiff
       - path: Drukar/Resources/ua_freq.json
       - path: Drukar/Resources/en_freq.json
-      - path: Drukar/Resources/words_uk.txt.gz
-      - path: Drukar/Resources/words_en.txt.gz
+      - path: Drukar/Resources/words_uk.txt
+      - path: Drukar/Resources/words_en.txt

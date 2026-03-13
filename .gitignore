@@ -25,6 +25,10 @@ Packages/
 *.zip
 *.sha256
 
+# Large word list files (generated from .gz by scripts/decompress_wordlists.sh)
+Drukar/Resources/words_uk.txt
+Drukar/Resources/words_en.txt
+
 # Signing materials and secrets
 *.p12
 *.p8

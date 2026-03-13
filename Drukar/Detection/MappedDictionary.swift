@@ -2,7 +2,6 @@ import Foundation
 
 /// Memory-mapped dictionary with binary search.
 /// Loads a sorted newline-delimited word list via mmap — near-zero RAM usage.
-/// If the resource is gzip-compressed (.gz), decompresses to cache on first use.
 final class MappedDictionary: @unchecked Sendable {
     private let data: Data
 
@@ -10,54 +9,20 @@ final class MappedDictionary: @unchecked Sendable {
         self.data = data
     }
 
-    /// Load a sorted word list from a bundle resource.
     static func load(resource: String) -> MappedDictionary? {
-        if let url = Bundle.main.url(forResource: resource, withExtension: "txt") {
-            do {
-                let data = try Data(contentsOf: url, options: .mappedIfSafe)
-                DrukarLog.info("MappedDictionary: mmap \(resource).txt — \(data.count) bytes")
-                return MappedDictionary(data: data)
-            } catch {
-                DrukarLog.warning("MappedDictionary: failed to mmap \(resource).txt — \(error)")
-            }
+        guard let url = Bundle.main.url(forResource: resource, withExtension: "txt") else {
+            DrukarLog.warning("MappedDictionary: missing \(resource).txt in bundle")
+            return nil
         }
 
-        if let gzURL = Bundle.main.url(forResource: resource, withExtension: "txt.gz") {
-            let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
-                .appendingPathComponent("com.vasylpylypiv.inputmethod.Drukar", isDirectory: true)
-
-            guard let cacheDir else {
-                DrukarLog.warning("MappedDictionary: cannot find cache directory")
-                return nil
-            }
-
-            let cachedPath = cacheDir.appendingPathComponent("\(resource).txt")
-
-            if FileManager.default.fileExists(atPath: cachedPath.path) {
-                do {
-                    let data = try Data(contentsOf: cachedPath, options: .mappedIfSafe)
-                    DrukarLog.info("MappedDictionary: mmap cached \(resource).txt — \(data.count) bytes")
-                    return MappedDictionary(data: data)
-                } catch {
-                    DrukarLog.warning("MappedDictionary: cached file unreadable — \(error)")
-                }
-            }
-
-            do {
-                try FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
-                let decompressed = try decompressGzip(url: gzURL)
-                try decompressed.write(to: cachedPath)
-                let data = try Data(contentsOf: cachedPath, options: .mappedIfSafe)
-                DrukarLog.info("MappedDictionary: decompressed & mmap \(resource).txt — \(data.count) bytes")
-                return MappedDictionary(data: data)
-            } catch {
-                DrukarLog.warning("MappedDictionary: failed to decompress \(resource).txt.gz — \(error)")
-                return nil
-            }
+        do {
+            let data = try Data(contentsOf: url, options: .mappedIfSafe)
+            DrukarLog.info("MappedDictionary: mmap \(resource).txt — \(data.count) bytes")
+            return MappedDictionary(data: data)
+        } catch {
+            DrukarLog.warning("MappedDictionary: failed to mmap \(resource).txt — \(error)")
+            return nil
         }
-
-        DrukarLog.warning("MappedDictionary: missing \(resource).txt(.gz) in bundle")
-        return nil
     }
 
     /// Check if a word exists in the dictionary. O(log n) binary search.
@@ -124,18 +89,5 @@ final class MappedDictionary: @unchecked Sendable {
             if a != b { return Int(a) - Int(b) }
         }
         return length - target.count
-    }
-
-    // MARK: - Gzip Decompression
-
-    private static func decompressGzip(url: URL) throws -> Data {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/gunzip")
-        process.arguments = ["-c", url.path]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        try process.run()
-        process.waitUntilExit()
-        return pipe.fileHandleForReading.readDataToEndOfFile()
     }
 }
