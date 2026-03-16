@@ -553,7 +553,16 @@ class DrukarInputController: IMKInputController {
         let enInFreq = WordFrequency.isKnown(enLetters, language: "en")
         let uaInFreq = WordFrequency.isKnown(uaLetters, language: "uk")
 
-        DrukarLog.debug("eval: en='\(enWord)'(\(enInDict)/freq:\(enInFreq)) ua='\(uaWord)'(\(uaInDict)/freq:\(uaInFreq))")
+        DrukarLog.debug("eval: en='\(enWord)'(\(enInDict)) ua='\(uaWord)'(\(uaInDict))")
+
+        // IT dictionary and custom dictionary — highest priority (user-defined words)
+        let enIsIT = ITDictionary.isKnownITWord(enLetters, language: "en")
+        let uaIsIT = ITDictionary.isKnownITWord(uaLetters, language: "uk")
+        let enIsCustom = DrukarSettings.shared.isCustomWord(enLetters, language: "en")
+        let uaIsCustom = DrukarSettings.shared.isCustomWord(uaLetters, language: "uk")
+
+        if (enIsIT || enIsCustom) && !(uaIsIT || uaIsCustom) { return enWord }
+        if (uaIsIT || uaIsCustom) && !(enIsIT || enIsCustom) { return uaWord }
 
         if enInDict && uaInDict {
             // If only one side is in our own frequency dictionary, trust it over NSSpellChecker
@@ -594,17 +603,6 @@ class DrukarInputController: IMKInputController {
         }
         if enInDict { return enWord }
         if uaInDict { return uaWord }
-
-        let enIsIT = ITDictionary.isKnownITWord(enLetters, language: "en")
-        let uaIsIT = ITDictionary.isKnownITWord(uaLetters, language: "uk")
-        let enIsCustom = DrukarSettings.shared.isCustomWord(enLetters, language: "en")
-        let uaIsCustom = DrukarSettings.shared.isCustomWord(uaLetters, language: "uk")
-
-        if (uaIsIT || uaIsCustom) && !(enIsIT || enIsCustom) { return uaWord }
-        if (enIsIT || enIsCustom) && !(uaIsIT || uaIsCustom) { return enWord }
-        if (enIsIT || enIsCustom) && (uaIsIT || uaIsCustom) {
-            return detectedLanguageIsUkrainian ? uaWord : enWord
-        }
 
         if DrukarSettings.shared.autocorrectEnabled {
             let probableLang = detectedLanguageIsUkrainian ? "uk" : "en"
