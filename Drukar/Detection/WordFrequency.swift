@@ -1,8 +1,8 @@
 import Foundation
 
 enum WordFrequency {
-    static let ukrainianScores: [String: Double] = loadScores(from: "ua_freq")
-    static let englishScores: [String: Double] = loadScores(from: "en_freq")
+    private static let ukrainianScores: [String: Double] = loadScores(from: "ua_freq")
+    private static let englishScores: [String: Double] = loadScores(from: "en_freq")
 
     static func score(of word: String, language: String) -> Double {
         let lowered = word.lowercased()

@@ -162,7 +162,7 @@ class DrukarInputController: IMKInputController {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "Друкар (Drukar) v0.7"
-            alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nВЕСУМ 3.7M + SymSpell 150K + Norvig autocorrect\nCaps Lock = English mode\n\ngithub.com/VasylPylypiv/drukar"
+            alert.informativeText = "macOS Input Method для автоматичного визначення мови UA/EN.\n\nВЕСУМ 3.7M + Norvig autocorrect\nCaps Lock = English mode\n\ngithub.com/VasylPylypiv/drukar"
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
             alert.runModal()
@@ -560,7 +560,7 @@ class DrukarInputController: IMKInputController {
             if uaInFreq && !enInFreq { return uaWord }
             if enInFreq && !uaInFreq { return enWord }
 
-            // Neither in freq dict — check SymSpell high-confidence (guards against NSSpellChecker false positives)
+            // Neither in freq dict — check high-confidence (our own VESUM/SCOWL dictionaries)
             if !uaInFreq && !enInFreq {
                 let uaHighConf = dictionary.isHighConfidence(uaLetters, language: "uk")
                 let enHighConf = dictionary.isHighConfidence(enLetters, language: "en")
@@ -610,13 +610,13 @@ class DrukarInputController: IMKInputController {
             let probableLang = detectedLanguageIsUkrainian ? "uk" : "en"
             let primaryWord = detectedLanguageIsUkrainian ? uaLetters : enLetters
             if let fixed = safeCorrection(for: primaryWord, language: probableLang) {
-                DrukarLog.debug("symspell: '\(primaryWord)' → '\(fixed)' (\(probableLang))")
+                DrukarLog.debug("autocorrect: '\(primaryWord)' → '\(fixed)' (\(probableLang))")
                 return fixed
             }
             let secondaryLang = detectedLanguageIsUkrainian ? "en" : "uk"
             let secondaryWord = detectedLanguageIsUkrainian ? enLetters : uaLetters
             if let fixed = safeCorrection(for: secondaryWord, language: secondaryLang) {
-                DrukarLog.debug("symspell fallback: '\(secondaryWord)' → '\(fixed)' (\(secondaryLang))")
+                DrukarLog.debug("autocorrect fallback: '\(secondaryWord)' → '\(fixed)' (\(secondaryLang))")
                 return fixed
             }
         }

@@ -1,31 +1,24 @@
-import AppKit
+import Foundation
 
 final class WordDictionary: @unchecked Sendable {
     static let shared = WordDictionary()
 
-    private let uaSymSpell: SymSpell
-    private let enSymSpell: SymSpell
     private let uaMapped: MappedDictionary?
     private let enMapped: MappedDictionary?
 
-    private static let ukrainianAlphabet = Array("абвгґдежзиіїйклмнопрстуфхцчшщьюяє")
+    private static let ukrainianAlphabet = Array("абвгґдежзиіїйклмнопрстуфхцчшщьюяє'")
     private static let englishAlphabet = Array("abcdefghijklmnopqrstuvwxyz")
 
     private init() {
-        uaSymSpell = SymSpell(dictionary: WordFrequency.ukrainianScores)
-        enSymSpell = SymSpell(dictionary: WordFrequency.englishScores)
         uaMapped = MappedDictionary.load(resource: "words_uk")
         enMapped = MappedDictionary.load(resource: "words_en")
     }
 
-    // MARK: - isKnown: MappedDictionary (VESUM/SCOWL) → SymSpell
+    // MARK: - isKnown: MappedDictionary (VESUM 3.7M / SCOWL 134K)
 
     func isHighConfidence(_ word: String, language: String) -> Bool {
-        let lowered = word.lowercased()
         let mapped = language == "uk" ? uaMapped : enMapped
-        if mapped?.contains(lowered) == true { return true }
-        let symspell = language == "uk" ? uaSymSpell : enSymSpell
-        return symspell.isKnown(lowered)
+        return mapped?.contains(word.lowercased()) == true
     }
 
     func isKnownUkrainianWord(_ word: String) -> Bool {
@@ -39,36 +32,21 @@ final class WordDictionary: @unchecked Sendable {
     func isKnownWord(_ word: String, language: String) -> Bool {
         let lowered = word.lowercased()
         guard lowered.count >= 2 else { return false }
-
         let mapped = language == "uk" ? uaMapped : enMapped
-        if mapped?.contains(lowered) == true { return true }
-
-        let symspell = language == "uk" ? uaSymSpell : enSymSpell
-        if symspell.isKnown(lowered) { return true }
-
-        return false
+        return mapped?.contains(lowered) == true
     }
 
-    // MARK: - Autocorrect: SymSpell → Norvig+mmap → double transposition
+    // MARK: - Autocorrect: Norvig ED=1 over mmap → double transposition
 
     func correction(for word: String, language: String) -> String? {
         let lowered = word.lowercased()
         guard lowered.count >= 2 else { return nil }
         guard !isKnownWord(lowered, language: language) else { return nil }
 
-        // Level 1: SymSpell (150K frequent words, O(1))
-        let symspell = language == "uk" ? uaSymSpell : enSymSpell
-        let suggestions = symspell.lookup(lowered)
-        if let best = suggestions.first, best.distance > 0 {
-            return applyCase(from: word, to: best.word)
-        }
-
-        // Level 2: Norvig ED=1 over mmap (3.7M VESUM / 134K SCOWL, O(n·log N))
         if let norvig = correctionByNorvig(lowered, language: language) {
             return applyCase(from: word, to: norvig)
         }
 
-        // Level 3: Double transposition (two adjacent swaps, validated via mmap)
         if lowered.count >= 5 {
             if let transposed = correctionByDoubleTransposition(lowered, language: language) {
                 return applyCase(from: word, to: transposed)
@@ -78,18 +56,7 @@ final class WordDictionary: @unchecked Sendable {
         return nil
     }
 
-    /// Preserve capitalization from the original word onto the corrected word.
-    private func applyCase(from original: String, to corrected: String) -> String {
-        guard !original.isEmpty, !corrected.isEmpty else { return corrected }
-        let allUpper = original == original.uppercased() && original != original.lowercased()
-        if allUpper { return corrected.uppercased() }
-        if original.first?.isUppercase == true {
-            return corrected.prefix(1).uppercased() + corrected.dropFirst()
-        }
-        return corrected
-    }
-
-    // MARK: - Norvig ED=1: generate ~700 candidates, binary search in mmap
+    // MARK: - Norvig ED=1: ~700 candidates, binary search in mmap
 
     private func correctionByNorvig(_ word: String, language: String) -> String? {
         let mapped = language == "uk" ? uaMapped : enMapped
@@ -97,85 +64,83 @@ final class WordDictionary: @unchecked Sendable {
 
         let chars = Array(word)
         let alphabet = language == "uk" ? Self.ukrainianAlphabet : Self.englishAlphabet
-        let symspell = language == "uk" ? uaSymSpell : enSymSpell
 
         var bestCandidate: String?
         var bestScore: Double = -1
 
-        // Deletes: remove one character
-        for i in 0..<chars.count {
-            var modified = chars
-            modified.remove(at: i)
-            let candidate = String(modified)
+        func check(_ candidate: String) {
             if candidate.count >= 2, mapped.contains(candidate) {
-                let score = symspell.score(of: candidate)
-                if score > bestScore { bestScore = score; bestCandidate = candidate }
+                let score = WordFrequency.score(of: candidate, language: language)
+                if score > bestScore {
+                    bestScore = score
+                    bestCandidate = candidate
+                }
             }
         }
 
-        // Inserts: add one character at each position
+        // Deletes
+        for i in 0..<chars.count {
+            var m = chars; m.remove(at: i); check(String(m))
+        }
+
+        // Inserts
         for i in 0...chars.count {
             for ch in alphabet {
-                var modified = chars
-                modified.insert(ch, at: i)
-                let candidate = String(modified)
-                if mapped.contains(candidate) {
-                    let score = symspell.score(of: candidate)
-                    if score > bestScore { bestScore = score; bestCandidate = candidate }
-                }
+                var m = chars; m.insert(ch, at: i); check(String(m))
             }
         }
 
-        // Replaces: swap one character for another
+        // Replaces
         for i in 0..<chars.count {
-            let original = chars[i]
-            for ch in alphabet where ch != original {
-                var modified = chars
-                modified[i] = ch
-                let candidate = String(modified)
-                if mapped.contains(candidate) {
-                    let score = symspell.score(of: candidate)
-                    if score > bestScore { bestScore = score; bestCandidate = candidate }
-                }
+            let orig = chars[i]
+            for ch in alphabet where ch != orig {
+                var m = chars; m[i] = ch; check(String(m))
             }
         }
 
-        // Transposes: swap two adjacent characters
+        // Transposes
         for i in 0..<(chars.count - 1) {
-            var modified = chars
-            modified.swapAt(i, i + 1)
-            let candidate = String(modified)
-            if candidate != word, mapped.contains(candidate) {
-                let score = symspell.score(of: candidate)
-                if score > bestScore { bestScore = score; bestCandidate = candidate }
-            }
+            var m = chars; m.swapAt(i, i + 1)
+            let c = String(m)
+            if c != word { check(c) }
         }
 
         if let candidate = bestCandidate {
-            DrukarLog.debug("norvig: '\(word)' → '\(candidate)' (score=\(String(format: "%.2f", bestScore)))")
+            DrukarLog.debug("norvig: '\(word)' → '\(candidate)'")
         }
         return bestCandidate
     }
 
-    // MARK: - Double Adjacent Transposition
+    // MARK: - Double Adjacent Transposition (two swaps)
 
     private func correctionByDoubleTransposition(_ word: String, language: String) -> String? {
         var chars = Array(word)
-        guard chars.count >= 3 else { return nil }
+        guard chars.count >= 5 else { return nil }
 
         for i in 0..<(chars.count - 1) {
             chars.swapAt(i, i + 1)
             for j in 0..<(chars.count - 1) where j != i {
                 chars.swapAt(j, j + 1)
-                let candidate = String(chars)
-                if isKnownWord(candidate, language: language) {
-                    return candidate
+                if isKnownWord(String(chars), language: language) {
+                    return String(chars)
                 }
                 chars.swapAt(j, j + 1)
             }
             chars.swapAt(i, i + 1)
         }
-
         return nil
+    }
+
+    // MARK: - Case Preservation
+
+    private func applyCase(from original: String, to corrected: String) -> String {
+        guard !original.isEmpty, !corrected.isEmpty else { return corrected }
+        if original == original.uppercased() && original != original.lowercased() {
+            return corrected.uppercased()
+        }
+        if original.first?.isUppercase == true {
+            return corrected.prefix(1).uppercased() + corrected.dropFirst()
+        }
+        return corrected
     }
 }
