@@ -60,22 +60,33 @@ final class WordDictionary: @unchecked Sendable {
         let symspell = language == "uk" ? uaSymSpell : enSymSpell
         let suggestions = symspell.lookup(lowered)
         if let best = suggestions.first, best.distance > 0 {
-            return best.word
+            return applyCase(from: word, to: best.word)
         }
 
         // Level 2: Norvig ED=1 over mmap (3.7M VESUM / 134K SCOWL, O(n·log N))
         if let norvig = correctionByNorvig(lowered, language: language) {
-            return norvig
+            return applyCase(from: word, to: norvig)
         }
 
         // Level 3: Double transposition (two adjacent swaps, validated via mmap)
         if lowered.count >= 5 {
             if let transposed = correctionByDoubleTransposition(lowered, language: language) {
-                return transposed
+                return applyCase(from: word, to: transposed)
             }
         }
 
         return nil
+    }
+
+    /// Preserve capitalization from the original word onto the corrected word.
+    private func applyCase(from original: String, to corrected: String) -> String {
+        guard !original.isEmpty, !corrected.isEmpty else { return corrected }
+        let allUpper = original == original.uppercased() && original != original.lowercased()
+        if allUpper { return corrected.uppercased() }
+        if original.first?.isUppercase == true {
+            return corrected.prefix(1).uppercased() + corrected.dropFirst()
+        }
+        return corrected
     }
 
     // MARK: - Norvig ED=1: generate ~700 candidates, binary search in mmap
