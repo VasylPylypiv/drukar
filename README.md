@@ -16,15 +16,18 @@ Drukar intercepts keystrokes *before* they reach your app, analyzes both possibl
 
 - **Auto-detection** — type in any layout, Drukar figures out the language
 - **Atomic replacement** — no backspace flicker, text appears correct from the start
-- **50,000-word frequency dictionaries** — logarithmic scoring from Leipzig Corpus (News 2024, 1M sentences)
-- **Autocorrect** — fixes typos like "привт" → "привіт", "настикаю" → "натискаю" (Damerau-Levenshtein, sliding window tolerance: distance 1 for 4–6 chars, distance 2 for 7+; double adjacent transposition)
-- **IT dictionary** — 150+ built-in Ukrainian IT terms (логи, деплой, кеш, юзер, фіча...)
-- **Custom dictionary** — add your own words via Settings
+- **3.7M Ukrainian word forms** — [VESUM](https://github.com/brown-uk/dict_uk) morphological dictionary via memory-mapped binary search (all declensions, conjugations, cases)
+- **134K English words** — [SCOWL](http://wordlist.aspell.net/) word list, also memory-mapped
+- **Norvig autocorrect** — generates ~700 candidate mutations per typo, validates against full dictionary via mmap. Fixes "перезавнтажив" → "Перезавантажив", "настикаю" → "натискаю"
+- **Case preservation** — autocorrect keeps original capitalization (Слово → Слово, СЛОВО → СЛОВО)
+- **IT dictionary** — 230+ built-in Ukrainian IT terms (верифікація, деплой, кеш, юзер, імплементація...)
+- **Custom dictionary** — add your own words via Settings (highest priority in detection)
+- **Frequency scoring** — 50K words per language from Leipzig Corpus for tie-breaking
 - **Caps Lock = English mode** — LED on = forced English, LED off = auto-detect
 - **Settings UI** — configure autocorrect, word length, custom dictionary, app exclusions
 - **Menu bar menu** — click "Д" icon to toggle modes, open settings
-- **Per-app exclusion** — auto-disabled in Terminal, iTerm2, Kitty, Warp, 1Password, Bitwarden, Alfred, Raycast; add your own
-- **Lightweight** — 0.02% CPU, 8 MB memory, ~2.5 MB download
+- **Per-app exclusion** — auto-disabled in Terminal, iTerm2, Kitty, Warp, 1Password, Bitwarden, Alfred, Raycast
+- **Lightweight** — 0.02% CPU, **8 MB memory** (3.7M dictionary with zero RAM via mmap)
 
 ## Why?
 
@@ -48,12 +51,11 @@ Drukar is different:
 2. Each key is mapped to **both** UA and EN characters simultaneously using `UCKeyTranslate`
 3. Text appears as **underlined composing text** (like CJK input methods) while you type
 4. On word boundary (space, enter), Drukar evaluates both interpretations:
-   - **Dictionary lookup** via `NSSpellChecker` (100K+ words per language)
-   - **Word frequency comparison** — 5,000 words per language, logarithmic scoring from Leipzig Corpus
-   - **IT slang dictionary** (150+ Ukrainian tech terms)
-   - **Custom user dictionary** (added via Settings)
-   - **Autocorrect** (SymSpell fuzzy lookup d=1, double transposition fallback, NSSpellChecker last resort)
-   - **NLLanguageRecognizer** (Apple ML model, replaces manual bigram tables)
+   - **IT slang + Custom dictionary** (highest priority — user-defined words always win)
+   - **Dictionary lookup** — mmap binary search in VESUM 3.7M / SCOWL 134K
+   - **Word frequency comparison** — 50K words per language, logarithmic scoring
+   - **Autocorrect** — Norvig ED=1 (~700 mutations × mmap lookup), double transposition fallback
+   - **NLLanguageRecognizer** — Apple ML model as final tiebreaker
    - **Single-letter word whitelist** (і, я, в, a, I)
 5. The correct interpretation is committed atomically
 6. Language context carries over: after a Ukrainian word, the next word displays in Cyrillic; after English — in Latin
@@ -85,6 +87,7 @@ Requires macOS 14.0+, Xcode 16.0+, [XcodeGen](https://github.com/yonaskolb/Xcode
 ```bash
 git clone https://github.com/VasylPylypiv/drukar.git
 cd drukar
+./scripts/decompress_wordlists.sh   # decompress VESUM/SCOWL word lists
 xcodegen generate
 open Drukar.xcodeproj
 ```
@@ -98,15 +101,20 @@ kill -9 $(pgrep -x Drukar)
 cp -R "$HOME/Library/Developer/Xcode/DerivedData/Drukar-*/Build/Products/Debug/Drukar.app" "$HOME/Library/Input Methods/"
 ```
 
-### Regenerating Frequency Dictionaries
+### Regenerating Dictionaries
 
-The frequency JSON files are included in the repo. To regenerate from fresh Leipzig Corpus data:
+Frequency dictionaries (Leipzig Corpus):
 
 ```bash
 python3 scripts/generate_freq.py
 ```
 
-This downloads the latest Ukrainian and English news corpora (1M sentences each) and produces `Drukar/Resources/ua_freq.json` and `Drukar/Resources/en_freq.json` with 50,000 words per language.
+Word lists (VESUM + SCOWL):
+
+```bash
+python3 scripts/generate_wordlists.py
+./scripts/decompress_wordlists.sh
+```
 
 ## Project Structure
 
@@ -121,51 +129,61 @@ Drukar/
 │   └── LayoutResolver.swift         # TIS layout queries & switching
 ├── Detection/
 │   ├── DualBuffer.swift         # Dual EN/UA keystroke buffer
-│   ├── LanguageDetector.swift   # Bigram tables and scoring
-│   ├── WordDictionary.swift     # NSSpellChecker + SymSpell autocorrect
-│   ├── WordFrequency.swift      # JSON-loaded word frequency scores (50K words/lang)
-│   ├── SymSpell.swift           # Symmetric Delete spelling correction (fuzzy lookup)
+│   ├── LanguageDetector.swift   # Layout identification + bigram tables
+│   ├── WordDictionary.swift     # Norvig autocorrect + mmap isKnown
+│   ├── WordFrequency.swift      # JSON-loaded frequency scores (50K/lang)
+│   ├── MappedDictionary.swift   # Memory-mapped binary search (zero RAM)
 │   ├── CharacterMapper.swift    # UCKeyTranslate keycode↔character mapping
-│   └── ITDictionary.swift       # Built-in IT slang (150+ words)
+│   └── ITDictionary.swift       # Built-in IT slang (230+ words)
 ├── Settings/
 │   ├── DrukarSettings.swift     # UserDefaults persistence
 │   ├── SettingsView.swift       # SwiftUI settings window
 │   └── SettingsWindowController.swift
 ├── Resources/
 │   ├── Info.plist               # IMK configuration
-│   ├── ua_freq.json             # Ukrainian word frequencies (50K, Leipzig Corpus)
-│   ├── en_freq.json             # English word frequencies (50K, Leipzig Corpus)
+│   ├── words_uk.txt.gz          # VESUM Ukrainian word forms (3.7M, compressed)
+│   ├── words_en.txt.gz          # SCOWL English words (134K, compressed)
+│   ├── ua_freq.json             # Ukrainian frequency scores (50K, Leipzig)
+│   ├── en_freq.json             # English frequency scores (50K, Leipzig)
 │   └── Assets.xcassets/
 └── scripts/
-    └── generate_freq.py         # Regenerate frequency JSONs from Leipzig data
+    ├── generate_freq.py         # Regenerate frequency JSONs from Leipzig data
+    ├── generate_wordlists.py    # Generate sorted word lists from VESUM/SCOWL
+    └── decompress_wordlists.sh  # Decompress .gz for Xcode build
 ```
 
 ## Performance
 
-- **CPU**: 0.02% idle, <5% during typing
-- **Private Memory**: 8 MB
-- **Threads**: 4
+- **CPU**: 0.02% idle, <1% during typing
+- **Memory**: 8 MB (3.7M dictionary via mmap — zero RAM overhead)
+- **Threads**: 3
 - **Hangs**: 0
-- **Download**: ~2.5 MB
+- **Universal binary**: arm64 (Apple Silicon) + x86_64 (Intel)
 
 ## Changelog
 
+### v0.7
+
+- **VESUM dictionary**: 3,679,690 Ukrainian word forms via memory-mapped binary search — all declensions, conjugations, cases. "верифікації", "натискаю", "конфігурацією" — all recognized
+- **SCOWL dictionary**: 133,746 English words replacing NSSpellChecker — no more false positives on gibberish
+- **Norvig autocorrect**: generates ~700 candidate mutations per typo (inserts, deletes, replaces, transposes), validates each via mmap binary search against full dictionary. Zero additional RAM
+- **NSSpellChecker fully removed**: replaced by own dictionaries for deterministic, predictable behavior
+- **SymSpell removed**: Norvig + mmap provides same correction quality with zero RAM overhead (8 MB total vs 193 MB with SymSpell)
+- **Case preservation**: autocorrect maintains original capitalization
+- **IT dictionary expanded**: 230+ terms including верифікація, валідація, імплементація, оптимізація, конфігурація
+- **Custom dictionary priority**: user-defined words now checked before general dictionary — always win
+
 ### v0.5
 
-- **SymSpell autocorrect**: custom Symmetric Delete spelling correction replaces NSSpellChecker.guesses() as primary autocorrect engine — O(1) candidate lookup from 50K-word index
-- **Hybrid isKnown**: SymSpell exact match (d=0) checked first, NSSpellChecker as fallback for words outside the 50K dictionary
-- **Language-aware fuzzy search**: autocorrect runs for the probable language first (based on context), then falls back to the other — reduces cross-language false positives
-- **NSSpellChecker demoted**: system spell checker now only used for isKnown validation and as last-resort guess source
+- **SymSpell autocorrect** (later replaced by Norvig in v0.7)
+- **NSSpellChecker false positive protection**
 
 ### v0.4
 
-- **Expanded frequency dictionaries**: 500 → 50,000 word forms per language, sourced from Leipzig Corpus (News 2024, 1M sentences)
-- **Logarithmic scoring**: `log10(totalWords / rank)` replaces linear `1 - rank/501` for better discrimination across frequency ranks
-- **JSON-loaded dictionaries**: frequency data loaded from bundled JSON files (~1MB UA + ~850KB EN) instead of hardcoded Swift arrays
-- **Double transposition autocorrect**: brute-force tries two adjacent swaps for 5+ char words, fixing cases like "настикаю" → "натискаю" where NSSpellChecker returns no suggestions
-- **Expanded app blacklist**: added 1Password, Bitwarden, Alfred, Raycast to auto-excluded apps
-- **Sliding window autocorrect**: distance 1 for 4–6 character words, distance 2 for 7+ characters; relaxed first-letter rule for longer words
-- **Regeneration script**: `scripts/generate_freq.py` downloads and processes Leipzig corpus data
+- **Expanded frequency dictionaries**: 500 → 50,000 word forms per language (Leipzig Corpus)
+- **Logarithmic scoring**: `log10(totalWords / rank)` for better frequency discrimination
+- **Double transposition autocorrect**: fixes "настикаю" → "натискаю"
+- **Expanded app blacklist**: 1Password, Bitwarden, Alfred, Raycast
 
 ### v0.3
 
@@ -174,21 +192,27 @@ Drukar/
 ## Known Limitations
 
 - **Terminal apps** — Terminal.app, iTerm2 etc. are auto-excluded (don't support IMK marked text)
+- **Some web input fields** — certain custom text fields (React/Angular ContentEditable) may not support IMK marked text protocol
 - **Ambiguous short words** (e.g., "це"/"wt" — both valid in dictionaries) — resolved by language context from previous word
-- **Intermittent state issues** in Telegram/Slack after rapid window switching
 
 ## Background
 
 This project started as a fork of [rmarinsky/papuga](https://github.com/rmarinsky/papuga) — a macOS menu bar utility for manual UA/EN layout switching. I added automatic wrong-layout detection using CGEvent tap, but hit fundamental limitations: visible text flicker during correction, race conditions with fast typing, unreliable layout switching in Electron apps.
 
-Drukar is a clean-room rewrite using InputMethodKit — the proper macOS API for input methods. The detection algorithms (dual buffer, NSSpellChecker, bigram analysis) are preserved; the replacement mechanism is entirely new.
+Drukar is a clean-room rewrite using InputMethodKit — the proper macOS API for input methods. The detection algorithms (dual buffer, frequency analysis, autocorrect) are preserved; the replacement mechanism is entirely new.
+
+## Dictionary Credits
+
+- **VESUM** (Великий електронний словник української мови) by Andriy Rysin, Vasyl Starko & BrUK team — [brown-uk/dict_uk](https://github.com/brown-uk/dict_uk) (CC BY-NC-SA 4.0)
+- **SCOWL** (Spell Checker Oriented Word Lists) by Kevin Atkinson — [wordlist.aspell.net](http://wordlist.aspell.net/)
+- **Leipzig Corpora Collection** — [wortschatz.uni-leipzig.de](https://wortschatz.uni-leipzig.de/)
 
 ## Contributing
 
 Issues and PRs are welcome. The main areas that need improvement:
 
 - [ ] Undo correction (backspace after space reverts to original)
-- [ ] Retrospective correction (re-evaluate previous 2-3 words together)
+- [ ] Prefix matching (early language detection during typing via mmap lower_bound)
 - [ ] Support for more language pairs (RU/EN, PL/EN, etc.)
 - [ ] Apple Developer ID signing (eliminate "unidentified developer" warning)
 - [ ] Homebrew Cask distribution
@@ -196,3 +220,5 @@ Issues and PRs are welcome. The main areas that need improvement:
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+Dictionary data (VESUM) is licensed under CC BY-NC-SA 4.0.
