@@ -527,6 +527,12 @@ class DrukarInputController: IMKInputController {
     private static let singleLetterEN: Set<String> = ["i", "a"]
 
     private func evaluateBestInterpretation(enWord: String, uaWord: String) -> String {
+        // Bypass: code tokens (ALL_CAPS, camelCase, digits, URLs, etc.) → pass as EN
+        if BypassFilter.shouldBypass(enWord: enWord, uaWord: uaWord) {
+            DrukarLog.debug("bypass: '\(enWord)' (code/IT token)")
+            return enWord
+        }
+
         let enLetters = String(enWord.filter { $0.isLetter })
         let uaLetters = String(uaWord.filter { $0.isLetter })
 
