@@ -432,7 +432,17 @@ class DrukarInputController: IMKInputController {
             let correctedWord = evaluateBestInterpretation(enWord: enWord, uaWord: uaWord)
             detectedLanguageIsUkrainian = (correctedWord == uaWord)
             lastCommittedWord = correctedWord
-            client.insertText(correctedWord + punct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+
+            // Resolve punctuation AFTER detecting language of current word
+            var resolvedPunct = event.characters ?? ""
+            if mapsReady {
+                let layoutID = detectedLanguageIsUkrainian ? uaLayoutID : enLayoutID
+                if let id = layoutID, let ch = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: id) {
+                    resolvedPunct = String(ch)
+                }
+            }
+
+            client.insertText(correctedWord + resolvedPunct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
             state = .idle
         } else {
             client.insertText(punct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
