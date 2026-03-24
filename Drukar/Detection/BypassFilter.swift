@@ -53,7 +53,11 @@ enum BypassFilter {
         if word.contains("://") { return true }
         if word.contains("@") && word.contains(".") { return true }
         if word.hasPrefix("/") || word.hasPrefix("~/") || word.hasPrefix("./") { return true }
-        if word.contains("/") && word.contains(".") { return true }
+        // Require at least one letter around "/" to look like a path (not just punctuation)
+        let parts = word.split(separator: "/")
+        if parts.count >= 2 && parts.allSatisfy({ $0.contains(where: { $0.isLetter && $0.isASCII }) }) {
+            return true
+        }
         return false
     }
 
