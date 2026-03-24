@@ -373,24 +373,30 @@ class DrukarInputController: IMKInputController {
 
     // MARK: - Punctuation
 
-    private static let punctuationChars: Set<Character> = [".", ",", "!", "?", ";", ":", "\"", "'", "(", ")", "-"]
+    private static let punctuationChars: Set<Character> = [".", ",", "!", "?", ";", ":", "\"", "'", "(", ")", "-", "/"]
 
     private func isPunctuation(_ event: NSEvent) -> Bool {
-        guard let chars = event.characters, let ch = chars.first else { return false }
-        guard Self.punctuationChars.contains(ch) else { return false }
-
-        // Only treat as punctuation if NEITHER layout maps this key to a letter
         let keyCode = event.keyCode
         let isShifted = event.modifierFlags.contains(.shift)
+
+        // Check if any layout maps this key to a punctuation character
+        var hasPunct = false
+        if let chars = event.characters, let ch = chars.first, Self.punctuationChars.contains(ch) {
+            hasPunct = true
+        }
         if mapsReady {
             if let enID = enLayoutID,
-               let enChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: enID),
-               enChar.isLetter { return false }
+               let enChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: enID) {
+                if enChar.isLetter { return false }
+                if Self.punctuationChars.contains(enChar) { hasPunct = true }
+            }
             if let uaID = uaLayoutID,
-               let uaChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: uaID),
-               uaChar.isLetter { return false }
+               let uaChar = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: uaID) {
+                if uaChar.isLetter { return false }
+                if Self.punctuationChars.contains(uaChar) { hasPunct = true }
+            }
         }
-        return true
+        return hasPunct
     }
 
     private func handlePunctuation(event: NSEvent, client: IMKTextInput) {
