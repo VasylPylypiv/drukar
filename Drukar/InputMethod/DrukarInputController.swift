@@ -403,23 +403,31 @@ class DrukarInputController: IMKInputController {
         let keyCode = event.keyCode
         let isShifted = event.modifierFlags.contains(.shift)
 
-        // Get punctuation character from the correct layout
-        var punct = event.characters ?? ""
+        // Resolve punctuation from both layouts upfront
+        let fallbackPunct = event.characters ?? ""
+        var enPunct = fallbackPunct
+        var uaPunct = fallbackPunct
         if mapsReady {
-            let layoutID = detectedLanguageIsUkrainian ? uaLayoutID : enLayoutID
-            if let id = layoutID, let ch = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: id) {
-                punct = String(ch)
+            if let id = enLayoutID, let ch = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: id) {
+                enPunct = String(ch)
+            }
+            if let id = uaLayoutID, let ch = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: id) {
+                uaPunct = String(ch)
             }
         }
 
         // Commit pending as-is with punctuation
         if case .pending(let pw) = state {
-            let word = detectedLanguageIsUkrainian ? pw.uaWord : pw.enWord
+            let isUA = detectedLanguageIsUkrainian
+            let word = isUA ? pw.uaWord : pw.enWord
+            let punct = isUA ? uaPunct : enPunct
             if buffer.isEmpty {
                 client.insertText(word + punct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
             } else {
                 let currentWord = evaluateBestInterpretation(enWord: buffer.enWord, uaWord: buffer.uaWord)
-                client.insertText(word + " " + currentWord + punct,
+                let isCurrentUA = (currentWord == buffer.uaWord)
+                let currentPunct = isCurrentUA ? uaPunct : enPunct
+                client.insertText(word + " " + currentWord + currentPunct,
                                   replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
                 buffer.clear()
             }
@@ -438,19 +446,12 @@ class DrukarInputController: IMKInputController {
             let correctedWord = evaluateBestInterpretation(enWord: enWord, uaWord: uaWord)
             detectedLanguageIsUkrainian = (correctedWord == uaWord)
             lastCommittedWord = correctedWord
+            let punct = detectedLanguageIsUkrainian ? uaPunct : enPunct
 
-            // Resolve punctuation AFTER detecting language of current word
-            var resolvedPunct = event.characters ?? ""
-            if mapsReady {
-                let layoutID = detectedLanguageIsUkrainian ? uaLayoutID : enLayoutID
-                if let id = layoutID, let ch = characterMapper.characterForKeyCode(keyCode, shifted: isShifted, sourceID: id) {
-                    resolvedPunct = String(ch)
-                }
-            }
-
-            client.insertText(correctedWord + resolvedPunct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            client.insertText(correctedWord + punct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
             state = .idle
         } else {
+            let punct = detectedLanguageIsUkrainian ? uaPunct : enPunct
             client.insertText(punct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
     }
