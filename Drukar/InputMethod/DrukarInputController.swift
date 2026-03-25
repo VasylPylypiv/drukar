@@ -305,8 +305,9 @@ class DrukarInputController: IMKInputController {
         buffer.clear()
         composingText = ""
 
-        let correctedWord = evaluateBestInterpretation(enWord: enWord, uaWord: uaWord)
-        let currentIsEN = (correctedWord != uaWord) || (!detectedLanguageIsUkrainian && correctedWord == enWord)
+        let result = evaluateBestInterpretation(enWord: enWord, uaWord: uaWord)
+        let correctedWord = result.word
+        let currentIsEN = !result.isUkrainian
         let enInDict = dictionary.isKnownEnglishWord(enLetters)
         let uaInDict = dictionary.isKnownUkrainianWord(uaLetters)
         // Not ambiguous if frequency clearly resolves it
@@ -424,8 +425,9 @@ class DrukarInputController: IMKInputController {
             if buffer.isEmpty {
                 client.insertText(word + punct, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
             } else {
-                let currentWord = evaluateBestInterpretation(enWord: buffer.enWord, uaWord: buffer.uaWord)
-                let isCurrentUA = (currentWord == buffer.uaWord)
+                let currentResult = evaluateBestInterpretation(enWord: buffer.enWord, uaWord: buffer.uaWord)
+                let currentWord = currentResult.word
+                let isCurrentUA = currentResult.isUkrainian
                 let currentPunct = isCurrentUA ? uaPunct : enPunct
                 client.insertText(word + " " + currentWord + currentPunct,
                                   replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
@@ -443,8 +445,9 @@ class DrukarInputController: IMKInputController {
             buffer.clear()
             composingText = ""
 
-            let correctedWord = evaluateBestInterpretation(enWord: enWord, uaWord: uaWord)
-            detectedLanguageIsUkrainian = (correctedWord == uaWord)
+            let result = evaluateBestInterpretation(enWord: enWord, uaWord: uaWord)
+            let correctedWord = result.word
+            detectedLanguageIsUkrainian = result.isUkrainian
             lastCommittedWord = correctedWord
             let punct = detectedLanguageIsUkrainian ? uaPunct : enPunct
 
@@ -543,7 +546,25 @@ class DrukarInputController: IMKInputController {
     private static let singleLetterUA: Set<String> = ["і", "я", "в", "з", "у", "о", "а", "й", "ж", "є"]
     private static let singleLetterEN: Set<String> = ["i", "a"]
 
-    private func evaluateBestInterpretation(enWord: String, uaWord: String) -> String {
+    private func evaluateBestInterpretation(enWord: String, uaWord: String) -> (word: String, isUkrainian: Bool) {
+        let result = evaluateWord(enWord: enWord, uaWord: uaWord)
+        let isUA = isUkrainianResult(result, enWord: enWord, uaWord: uaWord)
+        return (result, isUA)
+    }
+
+    private func isUkrainianResult(_ result: String, enWord: String, uaWord: String) -> Bool {
+        if result == uaWord { return true }
+        if result == enWord { return false }
+        // Autocorrected word — check if it was corrected from UA or EN interpretation
+        let uaLetters = String(uaWord.filter { $0.isLetter }).lowercased()
+        let enLetters = String(enWord.filter { $0.isLetter }).lowercased()
+        let resultLower = result.lowercased()
+        if dictionary.isKnownWord(resultLower, language: "uk") && !dictionary.isKnownWord(resultLower, language: "en") { return true }
+        if dictionary.isKnownWord(resultLower, language: "en") && !dictionary.isKnownWord(resultLower, language: "uk") { return false }
+        return detectedLanguageIsUkrainian
+    }
+
+    private func evaluateWord(enWord: String, uaWord: String) -> String {
         // Bypass: code tokens (ALL_CAPS, camelCase, digits, URLs, etc.) → pass as EN
         if BypassFilter.shouldBypass(enWord: enWord, uaWord: uaWord) {
             DrukarLog.debug("bypass: '\(enWord)' (code/IT token)")
